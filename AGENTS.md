@@ -1,38 +1,72 @@
-# Agents — WEGIn
+# AGENTS.md — WEGIn
 
-Este arquivo contém diretrizes para revisão humana e para agentes de IA que trabalham neste projeto.
+Este arquivo orienta pessoas e agentes de IA que trabalham no WEGIn. Leia-o antes de implementar, alterar ou revisar código. Ao fazer mudanças, siga os padrões existentes no projeto e mantenha este documento atualizado quando uma decisão de arquitetura mudar.
 
-O conteúdo deste documento deve ser lido e considerado **antes de qualquer implementação, alteração ou revisão de código**.
+## Estrutura do projeto
 
-As instruções definidas aqui servem para manter consistência na arquitetura, organização, padrões de código e decisões técnicas do projeto WEGIn.
-
-## Estrutura do Projeto
-
-A estrutura do projeto é modular. O código da aplicação deve ficar em `src/`, com cada pasta responsável por uma camada específica. Novos arquivos devem ser incluídos na camada correspondente, evitando concentrar regras de negócio ou componentes reutilizáveis nas rotas.
+O aplicativo usa Expo Router e organiza o código em `src/`. Coloque cada arquivo na pasta correspondente à sua responsabilidade:
 
 ```text
 .
-├── assets/                    # Recursos estáticos usados pelo app
-│   ├── fonts/                 # Arquivos de fontes
-│   ├── icons/                 # Ícones próprios do produto
-│   └── images/                # Imagens, ícones do Expo e splash screen
+├── assets/
+│   ├── fonts/             # Fontes
+│   ├── icons/             # Ícones próprios do produto
+│   └── images/            # Imagens e recursos do Expo
 ├── src/
-│   ├── app/                   # Rotas, telas e layouts do Expo Router
-│   │   ├── _layout.tsx        # Layout e navegador raiz
-│   │   └── index.tsx          # Rota inicial (/)
-│   ├── api/                   # Clientes HTTP, endpoints e contratos de API
-│   ├── components/            # Componentes visuais reutilizáveis
-│   ├── database/              # Configuração, acesso e modelos de persistência local
-│   ├── hooks/                 # Hooks React reutilizáveis
-│   ├── lib/                   # Utilitários, adaptadores e configurações compartilhadas
-│   ├── services/              # Regras de negócio e integrações de domínio
-│   ├── styles/                # Tokens, temas e estilos compartilhados
-│   └── types/                 # Tipos e interfaces TypeScript compartilhados
-├── app.json                   # Configuração do Expo
-├── package.json               # Dependências e scripts do projeto
-└── tsconfig.json              # TypeScript e aliases de importação
+│   ├── app/               # Rotas, telas e layouts do Expo Router
+│   │   ├── _layout.tsx    # Layout e navegação raiz
+│   │   └── index.tsx      # Rota inicial
+│   ├── api/               # Cliente HTTP, chamadas e contratos da API
+│   ├── components/        # Componentes visuais reutilizáveis
+│   ├── database/          # Persistência local, quando necessária
+│   ├── hooks/             # Hooks React reutilizáveis
+│   ├── lib/               # Utilitários e configurações compartilhadas
+│   ├── services/          # Operações e regras da aplicação
+│   ├── styles/            # Tema, tokens e estilos compartilhados
+│   └── types/             # Tipos TypeScript compartilhados
+├── app.json
+├── package.json
+└── tsconfig.json
 ```
 
-O roteamento é baseado em arquivos pelo Expo Router: arquivos em `src/app/` representam rotas, e arquivos `_layout.tsx` definem a estrutura de navegação dos respectivos segmentos. Para novas funcionalidades, mantenha a tela ou rota em `src/app/` e extraia elementos reutilizáveis para `src/components/`, regras de domínio para `src/services/` e integrações externas para `src/api/`.
+* Mantenha os arquivos de `src/app/` focados na composição das telas e na navegação. Extraia componentes reutilizáveis para `src/components/`.
+* Centralize as chamadas ao backend em `src/api/`. Coloque em `src/services/` as operações que coordenam essas chamadas e aplicam regras da aplicação.
+* Use `src/database/` somente para dados que precisem de persistência local.
+* Use o alias `@/` para importar arquivos de `src/`, conforme a configuração do projeto. Para recursos de `assets/`, confira o alias configurado antes de usar `@/assets/`.
 
-O alias `@/` aponta para `src/`; use-o em importações entre módulos, por exemplo `import { Button } from '@/components/Button'`. Recursos estáticos podem ser importados por `@/assets/*`, que aponta para `assets/`.
+## Bibliotecas e reutilização
+
+Antes de adicionar uma dependência ou criar um componente, verifique o que já existe no projeto. Prefira reutilizar componentes, padrões de acesso à API e configurações existentes.
+
+| Biblioteca          | Uso no projeto                          |
+| ------------------- | --------------------------------------- |
+| NativeWind v4       | Estilização das interfaces              |
+| Gluestack UI v3     | Componentes de interface                |
+| Lucide React Native | Ícones de uso geral                     |
+| Expo Secure Store   | Armazenamento seguro do token de acesso |
+
+Consulte `package.json` para confirmar as versões instaladas. Não presuma que uma versão citada em documentação antiga corresponde à versão usada pelo projeto.
+
+## Telas, componentes e ícones
+
+* Crie telas e layouts de navegação em `src/app/`.
+* Coloque componentes visuais reutilizáveis em `src/components/`. Antes de criar um componente, confira se a Gluestack UI ou o próprio projeto já oferece uma opção adequada.
+* Use Lucide React Native para ícones de uso geral. Coloque em `assets/icons/` apenas ícones próprios do WEGIn ou recursos que a biblioteca não atende.
+* Evite concentrar chamadas HTTP, regras da aplicação e código de persistência dentro dos componentes de tela.
+
+## Estilização
+
+Use NativeWind como padrão de estilização. Mantenha cores, espaçamentos e outros valores compartilhados consistentes com o tema do projeto.
+
+Quando uma necessidade não for atendida adequadamente pelo NativeWind, use a API de estilos apropriada do React Native e organize os valores reutilizáveis em `src/styles/`. Evite espalhar estilos repetidos pelas telas.
+
+## Acesso à API e armazenamento do token
+
+Centralize a configuração HTTP e o tratamento comum de erros em `src/api/`. Armazene o token de acesso com Expo Secure Store; não o grave em armazenamento local sem proteção. Não inclua tokens, senhas ou outras credenciais no código-fonte ou em logs.
+
+## Antes de concluir uma alteração
+
+* Confira se os arquivos foram colocados nas pastas corretas e se há código existente que pode ser reutilizado.
+* Verifique se a alteração segue os padrões de navegação, componentes, estilos e acesso à API do projeto.
+* Execute as verificações disponíveis e relevantes em `package.json`, como TypeScript e lint, e corrija os problemas introduzidos pela alteração.
+* Atualize este arquivo se a mudança estabelecer um novo padrão para o projeto.
