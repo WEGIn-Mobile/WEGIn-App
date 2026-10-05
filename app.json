@@ -3,6 +3,7 @@
     "name": "WEGIn",
     "slug": "wegin",
     "version": "1.0.0",
+    "icon": "./assets/logos/wegin_logo_app.png",
     "orientation": "portrait",
     "scheme": "wegin",
     "userInterfaceStyle": "light",
@@ -10,7 +11,7 @@
     "ios": { "supportsTablet": true },
     "android": {
       "package": "com.wegin.app",
-      "versionCode": 1,
+      "versionCode": 2,
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
