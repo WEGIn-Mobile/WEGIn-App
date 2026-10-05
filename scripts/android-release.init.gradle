@@ -1,0 +1,24 @@
+gradle.beforeProject { project ->
+    project.afterEvaluate {
+        def ninja = System.getenv('WEGIN_NINJA')
+        // O React Native atribui o caminho CMake do app depois, em finalizeDsl.
+        if (ninja && project.hasProperty('android')) {
+            project.android.defaultConfig.externalNativeBuild.cmake.arguments(
+                "-DCMAKE_MAKE_PROGRAM=${ninja.replace('\\', '/')}"
+            )
+        }
+        if (project.path == ':app') {
+            def signingDirectory = new File(project.rootDir.parentFile, '.signing')
+            def credentials = new Properties()
+            new File(signingDirectory, 'android.properties').withInputStream {
+                credentials.load(it)
+            }
+            def signing = project.android.signingConfigs.create('weginRelease')
+            signing.storeFile = new File(signingDirectory, 'wegin-release.jks')
+            signing.storePassword = credentials.getProperty('storePassword')
+            signing.keyAlias = 'wegin'
+            signing.keyPassword = credentials.getProperty('storePassword')
+            project.android.buildTypes.release.signingConfig = signing
+        }
+    }
+}

@@ -22,6 +22,20 @@ MVP mobile de uma rede social interna da WEG, construído com Expo Router, React
 
 Para um celular físico, use o IP local do computador (por exemplo, `http://192.168.1.10:3333/api`), com os dois dispositivos na mesma rede. No emulador Android padrão, use `http://10.0.2.2:3333/api`. No navegador ou simulador iOS local, use `http://localhost:3333/api`. Reinicie o Expo depois de mudar o ambiente.
 
+## Gerar APK no Windows
+
+Instale um JDK compatível com Gradle 8.14.3 e o SDK Android. Configure `JAVA_HOME` e `ANDROID_HOME`. O primeiro build baixa as dependências nativas e o Ninja 1.13.2 em `.tmp/`, para suportar caminhos longos no Windows, e pode instalar componentes faltantes no SDK.
+
+Configure `EXPO_PUBLIC_API_URL` em `.env.local` com uma URL HTTPS acessível pelos celulares, incluindo `/api`. Essa URL fica incorporada no APK; alterá-la exige um novo build.
+
+```sh
+npm run build:apk
+```
+
+O APK de release é salvo em `builds/WEGIn-<versão>.apk`, com o JavaScript incorporado e suporte a ARM e x86, sem precisar do Expo Go ou de um servidor Metro. Envie o arquivo ao dispositivo Android, abra-o e permita a instalação por essa origem quando o sistema solicitar.
+
+O build gera uma chave própria na pasta `.signing/` e a reutiliza nas próximas compilações. Faça um backup privado dessa pasta completa para conseguir atualizar os aplicativos já instalados. Não envie a chave nem `android.properties` aos usuários. `builds/`, `.signing/`, `.tmp/` e os projetos nativos gerados ficam fora do Git.
+
 ## Verificação
 
 ```sh

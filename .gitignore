@@ -3,6 +3,9 @@
 # dependencies
 node_modules/
 .tmp/
+builds/
+.signing/
+.idea
 
 # Expo
 .expo/

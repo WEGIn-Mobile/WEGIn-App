@@ -75,6 +75,8 @@ Centralize a configuração HTTP e o tratamento comum de erros em `src/api/`. Ar
 
 ## Antes de concluir uma alteração
 
+* Para gerar um APK instalável no Windows, use `npm run build:apk`. O script gera o projeto Android, assina o release com a chave privada de `.signing/` e salva o APK em `builds/`. Preserve a pasta `.signing/` para atualizações e nunca versione ou registre suas credenciais. A URL `EXPO_PUBLIC_API_URL` é incorporada durante o build e deve ser acessível pelos dispositivos.
+
 * Confira se os arquivos foram colocados nas pastas corretas e se há código existente que pode ser reutilizado.
 * Verifique se a alteração segue os padrões de navegação, componentes, estilos e acesso à API do projeto.
 * Execute as verificações disponíveis e relevantes em `package.json`, como TypeScript e lint, e corrija os problemas introduzidos pela alteração.
