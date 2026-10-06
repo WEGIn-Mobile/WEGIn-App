@@ -64,7 +64,18 @@ Quando uma necessidade não for atendida adequadamente pelo NativeWind, use a AP
 
 Centralize a configuração HTTP e o tratamento comum de erros em `src/api/`. Armazene o token de acesso com Expo Secure Store; não o grave em armazenamento local sem proteção. Não inclua tokens, senhas ou outras credenciais no código-fonte ou em logs.
 
+## Padrões do MVP
+
+* As rotas públicas ficam em `src/app/(auth)/` e as três abas em `src/app/(main)/`. A proteção de rotas usa `Stack.Protected` e a sessão de `src/hooks/use-session.tsx`.
+* Os endpoints ficam em `src/api/`. Use `apiFetch` para aplicar o token, normalizar a URL e tratar erros. Não defina Content-Type manualmente para FormData.
+* No Android/iOS, a sessão persiste com Secure Store; na prévia web, o token fica somente em memória. Uma resposta 401 em rota protegida encerra a sessão.
+* Prepare o upload em `PostService` e mantenha os contratos das respostas em `src/types/`. IDs são strings e datas recebidas por JSON são strings.
+* Reutilize os componentes de `src/components/` e os valores de `src/styles/theme.ts`. As cores de marca para NativeWind estão em `tailwind.config.js`.
+* As listas de posts são atualizadas ao receber foco e usam paginação explícita. Não adicione bibliotecas de estado ou cache para os fluxos simples do MVP.
+
 ## Antes de concluir uma alteração
+
+* Para gerar um APK instalável no Windows, use `npm run build:apk`. O script gera o projeto Android, assina o release com a chave privada de `.signing/` e salva o APK em `builds/`. Preserve a pasta `.signing/` para atualizações e nunca versione ou registre suas credenciais. A URL `EXPO_PUBLIC_API_URL` é incorporada durante o build e deve ser acessível pelos dispositivos.
 
 * Confira se os arquivos foram colocados nas pastas corretas e se há código existente que pode ser reutilizado.
 * Verifique se a alteração segue os padrões de navegação, componentes, estilos e acesso à API do projeto.
