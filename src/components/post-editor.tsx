@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
+import type { ImagePickerAsset } from 'expo-image-picker';
 import { router, useNavigation } from 'expo-router';
 import {
   usePreventRemove,
@@ -20,10 +20,18 @@ import { ImagePlus } from 'lucide-react-native';
 import { getPost, editPost } from '@/api/posts';
 import { errorMessage } from '@/api/api-fetch';
 import { publishPost } from '@/services/PostService';
+import {
+  PhotoPermissionError,
+  pickPostPhoto,
+  requestPublicationPhotoPermissions,
+  type PhotoPermissionIssue,
+  type PostPhotoSource,
+} from '@/services/PostPhotoService';
 import { useSession } from '@/hooks/use-session';
 import type { Post } from '@/types/post';
 import { colors } from '@/styles/theme';
 import { PostImage } from './post-image';
+import { PhotoPermissionNotice } from './photo-permission-notice';
 import {
   Button,
   ConfirmDialog,
@@ -39,11 +47,17 @@ export function PostEditor({ postId }: { postId?: string }) {
   const route = useRoute();
   const { preventedRoutes } = usePreventRemoveContext();
   const [post, setPost] = useState<Post | null>(null);
-  const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [image, setImage] = useState<ImagePickerAsset | null>(null);
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(!!postId);
   const [busy, setBusy] = useState(false);
   const [picking, setPicking] = useState(false);
+  const [checkingPermissions, setCheckingPermissions] = useState(!postId);
+  const [permissionIssues, setPermissionIssues] = useState<PhotoPermissionIssue[]>(
+    [],
+  );
+  const permissionRequest = useRef<Promise<PhotoPermissionIssue[]> | null>(null);
+  const pickerOpen = useRef(false);
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
   const [saved, setSaved] = useState(false);
@@ -79,6 +93,30 @@ export function PostEditor({ postId }: { postId?: string }) {
   }, [exiting, nativeRemovalPrevented, exitAction, navigation]);
 
   useEffect(() => {
+    if (postId) return;
+    let active = true;
+    // Reuse the request if Strict Mode re-runs this effect while a dialog is open.
+    permissionRequest.current ??= requestPublicationPhotoPermissions();
+    permissionRequest.current
+      .then((issues) => {
+        if (active) setPermissionIssues(issues);
+      })
+      .catch(() => {
+        if (active) {
+          setError(
+            'Não foi possível verificar as permissões. Tente selecionar a foto novamente.',
+          );
+        }
+      })
+      .finally(() => {
+        if (active) setCheckingPermissions(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [postId]);
+
+  useEffect(() => {
     if (!postId) return;
     let active = true;
     setLoading(true);
@@ -104,28 +142,32 @@ export function PostEditor({ postId }: { postId?: string }) {
     };
   }, [postId, user?.id, attempt]);
 
-  async function pickImage() {
-    if (picking) return;
+  async function pickImage(source: PostPhotoSource = 'library') {
+    if (pickerOpen.current || checkingPermissions || busy || exiting) return;
+    pickerOpen.current = true;
     setPicking(true);
     setError('');
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-        preferredAssetRepresentationMode:
-          ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
-      });
-      if (!result.canceled) {
-        const selected = result.assets[0];
-        if ((selected.fileSize ?? selected.file?.size ?? 0) > 5 * 1024 * 1024) {
-          setError('Escolha uma foto de até 5 MB.');
-        } else setImage(selected);
+      const selected = await pickPostPhoto(source);
+      setPermissionIssues((issues) =>
+        issues.filter((issue) => issue.source !== source),
+      );
+      if (selected) setImage(selected);
+    } catch (cause) {
+      if (cause instanceof PhotoPermissionError) {
+        setPermissionIssues((issues) => [
+          ...issues.filter((issue) => issue.source !== source),
+          cause.issue,
+        ]);
+      } else {
+        setError(
+          cause instanceof Error
+            ? cause.message
+            : 'Não foi possível abrir a foto. Tente novamente.',
+        );
       }
-    } catch {
-      setError('Não foi possível abrir a galeria. Tente novamente.');
     } finally {
+      pickerOpen.current = false;
       setPicking(false);
     }
   }
@@ -209,18 +251,41 @@ export function PostEditor({ postId }: { postId?: string }) {
                     title="Selecionar foto"
                     secondary
                     loading={picking}
-                    onPress={pickImage}
+                    disabled={checkingPermissions || exiting}
+                    onPress={() => void pickImage()}
+                  />
+                  <Button
+                    title="Tirar foto"
+                    secondary
+                    disabled={checkingPermissions || picking || exiting}
+                    onPress={() => void pickImage('camera')}
                   />
                 </View>
               )}
             </View>
             {!postId && image && (
-              <Button
-                title="Trocar foto"
-                secondary
-                disabled={busy}
-                loading={picking}
-                onPress={pickImage}
+              <View className="gap-3">
+                <Button
+                  title="Trocar foto"
+                  secondary
+                  disabled={busy || checkingPermissions || exiting}
+                  loading={picking}
+                  onPress={() => void pickImage()}
+                />
+                <Button
+                  title="Tirar foto"
+                  secondary
+                  disabled={busy || checkingPermissions || picking || exiting}
+                  onPress={() => void pickImage('camera')}
+                />
+              </View>
+            )}
+            {!postId && (
+              <PhotoPermissionNotice
+                issues={permissionIssues}
+                disabled={checkingPermissions || picking || busy || exiting}
+                onRetry={(source) => void pickImage(source)}
+                onError={setError}
               />
             )}
             <Field

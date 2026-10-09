@@ -31,10 +31,11 @@
         "expo-image-picker",
         {
           "photosPermission": "Permita que o WEGIn acesse suas fotos para criar publicações.",
-          "cameraPermission": false,
+          "cameraPermission": "Permita que o WEGIn acesse sua câmera para tirar fotos para publicações.",
           "microphonePermission": false
         }
-      ]
+      ],
+      "./scripts/with-camera-permission"
     ],
     "experiments": { "typedRoutes": true, "reactCompiler": true }
   }

@@ -8,7 +8,7 @@ MVP mobile de uma rede social interna da WEG, construído com Expo Router, React
 - Feed cronológico com atualização ao puxar e carregamento de mais publicações.
 - Pesquisa por nome ou nome de usuário.
 - Perfil próprio e de terceiros, com grade de fotos.
-- Criação de publicação com imagem e legenda opcional.
+- Criação de publicação com foto da galeria ou câmera e legenda opcional.
 - Edição da legenda e exclusão das próprias publicações.
 - Curtir/descurtir e sair da conta.
 
@@ -47,7 +47,7 @@ npm run lint
 
 - `src/app/`: rotas e composição das telas.
 - `src/api/`: endpoints, configuração HTTP e erros.
-- `src/services/`: validação de cadastro e preparação do upload.
+- `src/services/`: validação de cadastro, permissões de fotos e preparação do upload.
 - `src/hooks/`: sessão e listagem de publicações.
 - `src/components/`: formulários, perfil e componentes reutilizáveis.
 - `src/types/`: contratos das respostas.
