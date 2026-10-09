@@ -12,6 +12,16 @@ export const getPost = (id: string) =>
   apiFetch<Post>(`/posts/${encodeURIComponent(id)}`);
 export const createPost = (body: FormData) =>
   apiFetch<Post>('/posts', { method: 'POST', body });
+export const getComments = (id: string, skip = 0, signal?: AbortSignal) =>
+  apiFetch<Page<Post>>(
+    `/posts/comments/${encodeURIComponent(id)}?take=20&skip=${skip}`,
+    { signal },
+  );
+export const createComment = (parentId: string, content: string) =>
+  apiFetch<Post>('/posts', {
+    method: 'POST',
+    body: JSON.stringify({ parentId, content }),
+  });
 export const editPost = (id: string, content: string) =>
   apiFetch<Post>(`/posts/${id}`, {
     method: 'PATCH',

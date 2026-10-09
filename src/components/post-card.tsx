@@ -1,7 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { Heart, MoreHorizontal, Pencil, Trash2 } from 'lucide-react-native';
+import {
+  Heart,
+  MessageCircle,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+} from 'lucide-react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+} from 'react-native-reanimated';
 import { deletePost, setPostLike } from '@/api/posts';
 import { errorMessage } from '@/api/api-fetch';
 import { useSession } from '@/hooks/use-session';
@@ -26,6 +39,11 @@ export function PostCard({
   const [confirm, setConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
+  const liking = useRef(false);
+  const scale = useSharedValue(1);
+  const heartStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
   useEffect(() => {
     setLiked(post.isLiked);
     setLikes(post.likes);
@@ -33,17 +51,20 @@ export function PostCard({
   const own = user?.id === post.authorId;
 
   async function toggleLike() {
-    if (busy) return;
+    if (liking.current) return;
+    liking.current = true;
     setBusy(true);
     setError('');
     try {
       await setPostLike(post.id, !liked);
       setLiked(!liked);
       setLikes((value) => value + (liked ? -1 : 1));
+      scale.value = withSequence(withSpring(1.3), withSpring(1));
     } catch (cause) {
       setError(errorMessage(cause));
     } finally {
       setBusy(false);
+      liking.current = false;
     }
   }
 
@@ -127,33 +148,78 @@ export function PostCard({
           </Pressable>
         </View>
       )}
-      <PostImage key={post.imageUrl} path={post.imageUrl} />
+      <GestureDetector
+        gesture={Gesture.Tap()
+          .numberOfTaps(2)
+          .runOnJS(true)
+          .onEnd((_event, success) => {
+            if (success && !liked) void toggleLike();
+          })}
+      >
+        <View collapsable={false}>
+          <PostImage key={post.imageUrl} path={post.imageUrl} />
+        </View>
+      </GestureDetector>
       <View className="gap-2 px-4 pt-2">
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={
-            liked ? 'Descurtir publicação' : 'Curtir publicação'
-          }
-          accessibilityState={{ selected: liked, disabled: busy }}
-          disabled={busy}
-          onPress={toggleLike}
-          className="min-h-11 flex-row items-center gap-2 self-start pr-4"
-        >
-          <Heart
-            size={25}
-            color={liked ? colors.danger : colors.text}
-            fill={liked ? colors.danger : 'transparent'}
-          />
-          <Text className="font-semibold text-slate-700">
-            {likes} {likes === 1 ? 'curtida' : 'curtidas'}
-          </Text>
-        </Pressable>
+        <View className="flex-row items-center gap-4">
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              liked ? 'Descurtir publicação' : 'Curtir publicação'
+            }
+            accessibilityState={{ selected: liked, disabled: busy }}
+            disabled={busy}
+            onPress={toggleLike}
+            className="min-h-11 flex-row items-center gap-2 self-start pr-4"
+          >
+            <Animated.View style={heartStyle}>
+              <Heart
+                size={25}
+                color={liked ? colors.danger : colors.text}
+                fill={liked ? colors.danger : 'transparent'}
+              />
+            </Animated.View>
+            <Text className="font-semibold text-slate-700">
+              {likes} {likes === 1 ? 'curtida' : 'curtidas'}
+            </Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Ver ${post.comments} comentários`}
+            className="min-h-11 flex-row items-center gap-2"
+            onPress={() =>
+              router.push({
+                pathname: '/post/comments',
+                params: { id: post.id },
+              })
+            }
+          >
+            <MessageCircle size={24} color={colors.text} />
+            <Text className="font-semibold text-slate-700">
+              {post.comments}
+            </Text>
+          </Pressable>
+        </View>
         {!!post.content && (
           <Text className="leading-6 text-slate-800">
             <Text className="font-semibold">@{post.author.username} </Text>
             {post.content}
           </Text>
         )}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Abrir comentários"
+          onPress={() =>
+            router.push({ pathname: '/post/comments', params: { id: post.id } })
+          }
+          className="min-h-11 justify-center"
+        >
+          <Text className="text-slate-500">
+            {post.comments
+              ? `Ver todos os ${post.comments} comentários`
+              : 'Adicionar comentário...'}
+          </Text>
+        </Pressable>
         <Text className="text-xs text-slate-500">
           {new Date(post.createdAt).toLocaleDateString('pt-BR', {
             day: 'numeric',

@@ -2,6 +2,7 @@ import './global.css';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 import { SessionProvider, useSession } from '@/hooks/use-session';
 import { ErrorNotice, Loading, Screen } from '@/components/common';
@@ -49,6 +50,7 @@ function Navigation() {
           options={{ title: 'Editar publicação' }}
         />
         <Stack.Screen name="post/[id]" options={{ title: 'Publicação' }} />
+        <Stack.Screen name="post/comments" options={{ title: 'Comentários' }} />
       </Stack.Protected>
     </Stack>
   );
@@ -56,13 +58,15 @@ function Navigation() {
 
 export default function RootLayout() {
   return (
-    <SafeAreaProvider>
-      <GluestackUIProvider mode="light">
-        <SessionProvider>
-          <StatusBar style="dark" />
-          <Navigation />
-        </SessionProvider>
-      </GluestackUIProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <GluestackUIProvider mode="light">
+          <SessionProvider>
+            <StatusBar style="dark" />
+            <Navigation />
+          </SessionProvider>
+        </GluestackUIProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
