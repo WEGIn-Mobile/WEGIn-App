@@ -29,6 +29,7 @@ type Session = {
   restore: () => Promise<void>;
   signIn: (input: RegisterInput, registering: boolean) => Promise<void>;
   signOut: () => Promise<void>;
+  updateUser: (profile: CurrentUser) => void;
 };
 const SessionContext = createContext<Session | null>(null);
 
@@ -92,7 +93,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   return (
     <SessionContext.Provider
-      value={{ user, token, loading, error, restore, signIn, signOut }}
+      value={{
+        user,
+        token,
+        loading,
+        error,
+        restore,
+        signIn,
+        signOut,
+        updateUser: (profile) =>
+          setUser((current) =>
+            current?.id === profile.id ? profile : current,
+          ),
+      }}
     >
       {children}
     </SessionContext.Provider>

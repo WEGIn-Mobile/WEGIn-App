@@ -11,7 +11,7 @@
     "ios": { "supportsTablet": true },
     "android": {
       "package": "com.wegin.app",
-      "versionCode": 6,
+      "versionCode": 9,
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
@@ -30,8 +30,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Permita que o WEGIn acesse suas fotos para criar publicações.",
-          "cameraPermission": "Permita que o WEGIn acesse sua câmera para tirar fotos para publicações.",
+          "photosPermission": "Permita que o WEGIn acesse suas fotos para publicações e foto de perfil.",
+          "cameraPermission": "Permita que o WEGIn acesse sua câmera para publicações e foto de perfil.",
           "microphonePermission": false
         }
       ],
