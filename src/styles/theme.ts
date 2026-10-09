@@ -5,4 +5,5 @@ export const colors = {
   muted: '#64748B',
   border: '#E2E8F0',
   danger: '#DC2626',
+  unread: '#16A34A',
 };

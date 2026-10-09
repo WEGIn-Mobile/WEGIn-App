@@ -56,6 +56,7 @@ function Navigation() {
           options={{ title: 'Editar perfil' }}
         />
         <Stack.Screen name="user/connections" options={{ title: 'Conexões' }} />
+        <Stack.Screen name="chat/[id]" options={{ title: 'Conversa' }} />
       </Stack.Protected>
     </Stack>
   );

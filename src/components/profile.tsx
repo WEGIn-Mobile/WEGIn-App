@@ -206,6 +206,18 @@ export function Profile({ userId }: { userId: string }) {
                           onPress={() => void toggleFollow()}
                         />
                       </View>
+                      <View className="flex-1">
+                        <Button
+                          title="Mensagem"
+                          secondary
+                          onPress={() =>
+                            router.push({
+                              pathname: '/chat/[id]',
+                              params: { id: userId },
+                            })
+                          }
+                        />
+                      </View>
                     </View>
                   )}
                   <Text className="mt-2 font-semibold text-slate-900">
