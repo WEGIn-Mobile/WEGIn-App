@@ -82,7 +82,6 @@ export function AuthForm({ registering = false }: { registering?: boolean }) {
                 <Field
                   label="Nome"
                   placeholder="Como você se chama?"
-                  value={name}
                   onChangeText={setName}
                   maxLength={60}
                   autoComplete="name"
@@ -91,7 +90,6 @@ export function AuthForm({ registering = false }: { registering?: boolean }) {
                 <Field
                   label="Nome de usuário"
                   placeholder="seu.usuario"
-                  value={username}
                   onChangeText={setUsername}
                   maxLength={60}
                   autoCapitalize="none"
@@ -103,7 +101,6 @@ export function AuthForm({ registering = false }: { registering?: boolean }) {
             <Field
               label="Email corporativo"
               placeholder="voce@weg.net"
-              value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               autoComplete="email"
@@ -117,7 +114,6 @@ export function AuthForm({ registering = false }: { registering?: boolean }) {
                 placeholder={
                   registering ? 'Crie uma senha segura' : 'Sua senha'
                 }
-                value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!visible}
                 autoCapitalize="none"

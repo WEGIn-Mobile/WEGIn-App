@@ -22,6 +22,8 @@ MVP mobile de uma rede social interna da WEG, construído com Expo Router, React
 
 Para um celular físico, use o IP local do computador (por exemplo, `http://192.168.1.10:3333/api`), com os dois dispositivos na mesma rede. No emulador Android padrão, use `http://10.0.2.2:3333/api`. No navegador ou simulador iOS local, use `http://localhost:3333/api`. Reinicie o Expo depois de mudar o ambiente.
 
+Se letras acentuadas não entrarem ao usar o teclado do computador no emulador, confira o layout em **Configurações > Sistema > Teclado > Teclado físico** do Android emulado. Para um teclado brasileiro, selecione **Brazilian** em cada dispositivo listado, como `AT Translated Set 2 keyboard` e `qwerty2`. No Gboard, adicione **Português (Brasil)** em **Idiomas** e ative **Mostrar teclado na tela** nas opções de **Teclado físico** para testar os acentos pelo teclado virtual. Compare os dois modos de entrada antes de atribuir a falha ao APK.
+
 ## Gerar APK no Windows
 
 Instale um JDK compatível com Gradle 8.14.3 e o SDK Android. Configure `JAVA_HOME` e `ANDROID_HOME`. O primeiro build baixa as dependências nativas e o Ninja 1.13.2 em `.tmp/`, para suportar caminhos longos no Windows, e pode instalar componentes faltantes no SDK.

@@ -291,7 +291,7 @@ export function PostEditor({ postId }: { postId?: string }) {
             <Field
               label="Legenda (opcional)"
               placeholder="O que você quer compartilhar?"
-              value={content}
+              defaultValue={post?.content ?? ''}
               onChangeText={setContent}
               multiline
               maxLength={255}
