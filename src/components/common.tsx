@@ -66,7 +66,11 @@ export function Button({
   );
 }
 
-export function Field({ label, ...props }: TextInputProps & { label: string }) {
+// Let the native keyboard own text composition (accents, suggestions and cursor).
+export function Field({
+  label,
+  ...props
+}: Omit<TextInputProps, 'value'> & { label: string }) {
   return (
     <View className="gap-2">
       <Text className="text-sm font-semibold text-slate-700">{label}</Text>

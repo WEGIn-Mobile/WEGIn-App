@@ -8,7 +8,7 @@ MVP mobile de uma rede social interna da WEG, construído com Expo Router, React
 - Feed cronológico com atualização ao puxar e carregamento de mais publicações.
 - Pesquisa por nome ou nome de usuário.
 - Perfil próprio e de terceiros, com grade de fotos.
-- Criação de publicação com imagem e legenda opcional.
+- Criação de publicação com foto da galeria ou câmera e legenda opcional.
 - Edição da legenda e exclusão das próprias publicações.
 - Curtir/descurtir e sair da conta.
 
@@ -22,11 +22,15 @@ MVP mobile de uma rede social interna da WEG, construído com Expo Router, React
 
 Para um celular físico, use o IP local do computador (por exemplo, `http://192.168.1.10:3333/api`), com os dois dispositivos na mesma rede. No emulador Android padrão, use `http://10.0.2.2:3333/api`. No navegador ou simulador iOS local, use `http://localhost:3333/api`. Reinicie o Expo depois de mudar o ambiente.
 
+Se letras acentuadas não entrarem ao usar o teclado do computador no emulador, confira o layout em **Configurações > Sistema > Teclado > Teclado físico** do Android emulado. Para um teclado brasileiro, selecione **Brazilian** em cada dispositivo listado, como `AT Translated Set 2 keyboard` e `qwerty2`. No Gboard, adicione **Português (Brasil)** em **Idiomas** e ative **Mostrar teclado na tela** nas opções de **Teclado físico** para testar os acentos pelo teclado virtual. Compare os dois modos de entrada antes de atribuir a falha ao APK.
+
 ## Gerar APK no Windows
 
 Instale um JDK compatível com Gradle 8.14.3 e o SDK Android. Configure `JAVA_HOME` e `ANDROID_HOME`. O primeiro build baixa as dependências nativas e o Ninja 1.13.2 em `.tmp/`, para suportar caminhos longos no Windows, e pode instalar componentes faltantes no SDK.
 
 Configure `EXPO_PUBLIC_API_URL` em `.env.local` com uma URL HTTPS acessível pelos celulares, incluindo `/api`. Essa URL fica incorporada no APK; alterá-la exige um novo build.
+
+O build mostra a URL que será incorporada, recusa endereços localhost e confere o endereço dentro do APK final. A URL também invalida o cache do bundle quando muda. Uma variável `EXPO_PUBLIC_API_URL` definida no terminal tem prioridade sobre os arquivos `.env`.
 
 ```sh
 npm run build:apk
@@ -47,7 +51,7 @@ npm run lint
 
 - `src/app/`: rotas e composição das telas.
 - `src/api/`: endpoints, configuração HTTP e erros.
-- `src/services/`: validação de cadastro e preparação do upload.
+- `src/services/`: validação de cadastro, permissões de fotos e preparação do upload.
 - `src/hooks/`: sessão e listagem de publicações.
 - `src/components/`: formulários, perfil e componentes reutilizáveis.
 - `src/types/`: contratos das respostas.

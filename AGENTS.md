@@ -70,12 +70,17 @@ Centralize a configuração HTTP e o tratamento comum de erros em `src/api/`. Ar
 * Os endpoints ficam em `src/api/`. Use `apiFetch` para aplicar o token, normalizar a URL e tratar erros. Não defina Content-Type manualmente para FormData.
 * No Android/iOS, a sessão persiste com Secure Store; na prévia web, o token fica somente em memória. Uma resposta 401 em rota protegida encerra a sessão.
 * Prepare o upload em `PostService` e mantenha os contratos das respostas em `src/types/`. IDs são strings e datas recebidas por JSON são strings.
+* Centralize câmera, galeria e permissões em `PostPhotoService`. Confira as permissões em cada nova publicação e antes de usar a fonte escolhida. Quando `canAskAgain` for falso, ofereça abrir as configurações. No Android 13+, use o seletor de fotos do sistema sem exigir acesso amplo aos arquivos. O plugin `scripts/with-camera-permission.js` remove bloqueios antigos da câmera em projetos Android já gerados.
+* Nos campos de texto, use `defaultValue` para o valor inicial e `onChangeText` para atualizar os dados do formulário; preserve a composição do teclado para acentos. Para limpar a pesquisa, use a referência do campo e `clear()`.
+* Use `FormScrollView` nos formulários. `useKeyboardInset` mede o contêiner na janela e reserva somente a área sobreposta pelo teclado; não some offsets de cabeçalho ou a altura inteira do teclado, pois isso pode duplicar o espaço já reservado pelo Android. No editor, `scrollToEndOnKeyboard` mantém a legenda e os controles finais visíveis após o redimensionamento. Mantenha NativeWind 4.2+ para compatibilidade das referências e estilos com React Native 0.81/Reanimated 4.
+* Antes de sair do editor após salvar ou descartar, aguarde a liberação da proteção em `usePreventRemoveContext` e navegue no próximo frame. Bloqueie envios duplicados durante a solicitação e a saída da tela.
 * Reutilize os componentes de `src/components/` e os valores de `src/styles/theme.ts`. As cores de marca para NativeWind estão em `tailwind.config.js`.
 * As listas de posts são atualizadas ao receber foco e usam paginação explícita. Não adicione bibliotecas de estado ou cache para os fluxos simples do MVP.
 
 ## Antes de concluir uma alteração
 
 * Para gerar um APK instalável no Windows, use `npm run build:apk`. O script gera o projeto Android, assina o release com a chave privada de `.signing/` e salva o APK em `builds/`. Preserve a pasta `.signing/` para atualizações e nunca versione ou registre suas credenciais. A URL `EXPO_PUBLIC_API_URL` é incorporada durante o build e deve ser acessível pelos dispositivos.
+* O build carrega a URL da API com o resolvedor de ambiente do Expo, repassa o valor ao Gradle/Metro e verifica a URL dentro do APK antes de copiá-lo para `builds/`. Não use localhost no APK. A URL faz parte dos inputs da tarefa de bundle para evitar reutilizar um endereço antigo.
 
 * Confira se os arquivos foram colocados nas pastas corretas e se há código existente que pode ser reutilizado.
 * Verifique se a alteração segue os padrões de navegação, componentes, estilos e acesso à API do projeto.

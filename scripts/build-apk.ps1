@@ -2,6 +2,12 @@ $ErrorActionPreference = 'Stop'
 $projectDirectory = Split-Path $PSScriptRoot -Parent
 Set-Location -LiteralPath $projectDirectory
 
+$apiAddress = & node (Join-Path $PSScriptRoot 'apk-api-config.js')
+if ($LASTEXITCODE -ne 0) { throw 'Corrija a URL da API antes de compilar o APK.' }
+# O prebuild carrega .env somente no seu próprio processo. Passe a mesma URL ao Gradle/Metro.
+$env:EXPO_PUBLIC_API_URL = $apiAddress
+Write-Output "API incorporada no APK: $apiAddress"
+
 if (-not $env:ANDROID_HOME -and -not $env:ANDROID_SDK_ROOT) {
     throw 'Configure ANDROID_HOME com o caminho do SDK Android.'
 }
@@ -76,5 +82,26 @@ $outputDirectory = Join-Path $projectDirectory 'builds'
 New-Item -ItemType Directory -Force -Path $outputDirectory | Out-Null
 $version = (Get-Content -Raw app.json | ConvertFrom-Json).expo.version
 $destination = Join-Path $outputDirectory "WEGIn-$version.apk"
-Copy-Item -LiteralPath 'android\app\build\outputs\apk\release\app-release.apk' -Destination $destination
+$releaseApk = Join-Path $projectDirectory 'android\app\build\outputs\apk\release\app-release.apk'
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$apkArchive = [IO.Compression.ZipFile]::OpenRead($releaseApk)
+try {
+    $bundleEntry = $apkArchive.GetEntry('assets/index.android.bundle')
+    if (-not $bundleEntry) { throw 'O APK não contém o JavaScript da aplicação.' }
+    $bundleStream = $bundleEntry.Open()
+    $bundleMemory = New-Object IO.MemoryStream
+    try {
+        $bundleStream.CopyTo($bundleMemory)
+        $bundleText = [Text.Encoding]::UTF8.GetString($bundleMemory.ToArray())
+        if (-not $bundleText.Contains($apiAddress)) {
+            throw 'A URL configurada da API não foi incorporada no APK. O arquivo não será distribuído.'
+        }
+    } finally {
+        $bundleStream.Dispose()
+        $bundleMemory.Dispose()
+    }
+} finally {
+    $apkArchive.Dispose()
+}
+Copy-Item -LiteralPath $releaseApk -Destination $destination
 Write-Output "APK gerado: $destination"

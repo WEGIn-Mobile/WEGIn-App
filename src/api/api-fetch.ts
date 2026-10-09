@@ -1,6 +1,7 @@
 import { getAccessToken } from '@/lib/secure-storage';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, '');
+const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL;
+const API_URL = configuredApiUrl?.trim().replace(/\/+$/, '');
 let onUnauthorized: (() => void) | undefined;
 
 export class ApiError extends Error {

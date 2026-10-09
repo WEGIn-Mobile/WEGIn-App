@@ -17,6 +17,7 @@ import {
 
 export default function SearchScreen() {
   const [query, setQuery] = useState('');
+  const input = useRef<TextInput>(null);
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -82,10 +83,10 @@ export default function SearchScreen() {
         <View className="min-h-12 flex-row items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3">
           <Search size={20} color={colors.muted} />
           <TextInput
+            ref={input}
             accessibilityLabel="Pesquisar por nome ou usuário"
             placeholder="Nome ou @usuário"
             placeholderTextColor={colors.muted}
-            value={query}
             onChangeText={setQuery}
             autoCapitalize="none"
             autoCorrect={false}
@@ -97,7 +98,10 @@ export default function SearchScreen() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Limpar pesquisa"
-              onPress={() => setQuery('')}
+              onPress={() => {
+                input.current?.clear();
+                setQuery('');
+              }}
               className="h-11 w-11 items-center justify-center"
             >
               <X size={20} color={colors.muted} />

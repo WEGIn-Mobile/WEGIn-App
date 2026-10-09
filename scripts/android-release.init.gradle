@@ -8,6 +8,10 @@ gradle.beforeProject { project ->
             )
         }
         if (project.path == ':app') {
+            project.tasks.matching { it.name == 'createBundleReleaseJsAndAssets' }.configureEach {
+                // A URL vem do ambiente e precisa invalidar o bundle quando mudar.
+                inputs.property('weginApiUrl', System.getenv('EXPO_PUBLIC_API_URL') ?: '')
+            }
             def signingDirectory = new File(project.rootDir.parentFile, '.signing')
             def credentials = new Properties()
             new File(signingDirectory, 'android.properties').withInputStream {
