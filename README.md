@@ -30,6 +30,8 @@ Instale um JDK compatível com Gradle 8.14.3 e o SDK Android. Configure `JAVA_HO
 
 Configure `EXPO_PUBLIC_API_URL` em `.env.local` com uma URL HTTPS acessível pelos celulares, incluindo `/api`. Essa URL fica incorporada no APK; alterá-la exige um novo build.
 
+O build mostra a URL que será incorporada, recusa endereços localhost e confere o endereço dentro do APK final. A URL também invalida o cache do bundle quando muda. Uma variável `EXPO_PUBLIC_API_URL` definida no terminal tem prioridade sobre os arquivos `.env`.
+
 ```sh
 npm run build:apk
 ```

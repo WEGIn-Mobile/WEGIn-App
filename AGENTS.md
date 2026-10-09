@@ -79,6 +79,7 @@ Centralize a configuração HTTP e o tratamento comum de erros em `src/api/`. Ar
 ## Antes de concluir uma alteração
 
 * Para gerar um APK instalável no Windows, use `npm run build:apk`. O script gera o projeto Android, assina o release com a chave privada de `.signing/` e salva o APK em `builds/`. Preserve a pasta `.signing/` para atualizações e nunca versione ou registre suas credenciais. A URL `EXPO_PUBLIC_API_URL` é incorporada durante o build e deve ser acessível pelos dispositivos.
+* O build carrega a URL da API com o resolvedor de ambiente do Expo, repassa o valor ao Gradle/Metro e verifica a URL dentro do APK antes de copiá-lo para `builds/`. Não use localhost no APK. A URL faz parte dos inputs da tarefa de bundle para evitar reutilizar um endereço antigo.
 
 * Confira se os arquivos foram colocados nas pastas corretas e se há código existente que pode ser reutilizado.
 * Verifique se a alteração segue os padrões de navegação, componentes, estilos e acesso à API do projeto.
