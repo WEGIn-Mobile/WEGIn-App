@@ -1,9 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { LogOut } from 'lucide-react-native';
 import { getProfile } from '@/services/UserService';
 import { errorMessage } from '@/api/api-fetch';
+import { getFollowing, setFollowing } from '@/api/follows';
 import { usePosts } from '@/hooks/use-posts';
 import { useSession } from '@/hooks/use-session';
 import type { User } from '@/types/user';
@@ -27,6 +28,9 @@ export function Profile({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(true);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [following, setFollowingState] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
+  const followingRequest = useRef(false);
   const list = usePosts(userId);
 
   const loadProfile = useCallback(
@@ -34,15 +38,21 @@ export function Profile({ userId }: { userId: string }) {
       setError('');
       setLoading(true);
       try {
-        const result = await getProfile(userId);
-        if (isActive()) setProfile(result);
+        const [result, follows] = await Promise.all([
+          getProfile(userId),
+          own ? Promise.resolve([]) : getFollowing(),
+        ]);
+        if (isActive()) {
+          setProfile(result);
+          setFollowingState(follows.some((person) => person.id === userId));
+        }
       } catch (cause) {
         if (isActive()) setError(errorMessage(cause));
       } finally {
         if (isActive()) setLoading(false);
       }
     },
-    [userId],
+    [userId, own],
   );
 
   useFocusEffect(
@@ -67,6 +77,34 @@ export function Profile({ userId }: { userId: string }) {
     }
   }
 
+  async function toggleFollow() {
+    if (followingRequest.current || !profile || own) return;
+    followingRequest.current = true;
+    setFollowBusy(true);
+    setError('');
+    try {
+      const result = await setFollowing(userId, !following);
+      setFollowingState(result.following);
+      setProfile((previous) =>
+        previous
+          ? {
+              ...previous,
+              followers: Math.max(
+                0,
+                previous.followers + (result.following ? 1 : -1),
+              ),
+            }
+          : previous,
+      );
+    } catch (cause) {
+      await loadProfile();
+      setError(errorMessage(cause));
+    } finally {
+      followingRequest.current = false;
+      setFollowBusy(false);
+    }
+  }
+
   return (
     <Screen>
       <FlatList
@@ -88,20 +126,40 @@ export function Profile({ userId }: { userId: string }) {
                   <View className="flex-row items-center justify-between">
                     <Avatar user={profile} large />
                     <View className="flex-row gap-6">
-                      <View className="items-center">
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="Ver seguidores"
+                        className="items-center"
+                        onPress={() =>
+                          router.push({
+                            pathname: '/user/connections',
+                            params: { id: userId, kind: 'followers' },
+                          })
+                        }
+                      >
                         <Text className="text-lg font-bold text-slate-900">
                           {profile.followers}
                         </Text>
                         <Text className="text-xs text-slate-500">
                           Seguidores
                         </Text>
-                      </View>
-                      <View className="items-center">
+                      </Pressable>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="Ver quem este perfil segue"
+                        className="items-center"
+                        onPress={() =>
+                          router.push({
+                            pathname: '/user/connections',
+                            params: { id: userId, kind: 'following' },
+                          })
+                        }
+                      >
                         <Text className="text-lg font-bold text-slate-900">
                           {profile.following}
                         </Text>
                         <Text className="text-xs text-slate-500">Seguindo</Text>
-                      </View>
+                      </Pressable>
                     </View>
                     {own && (
                       <Pressable
@@ -125,12 +183,30 @@ export function Profile({ userId }: { userId: string }) {
                       {profile.bio}
                     </Text>
                   )}
-                  {own && (
-                    <Button
-                      title="Nova publicação"
-                      secondary
-                      onPress={() => router.push('/post/create')}
-                    />
+                  {own ? (
+                    <View className="gap-3">
+                      <Button
+                        title="Editar perfil"
+                        secondary
+                        onPress={() => router.push('/profile/edit')}
+                      />
+                      <Button
+                        title="Nova publicação"
+                        onPress={() => router.push('/post/create')}
+                      />
+                    </View>
+                  ) : (
+                    <View className="flex-row gap-3">
+                      <View className="flex-1">
+                        <Button
+                          title={following ? 'Seguindo' : 'Seguir'}
+                          secondary={following}
+                          loading={followBusy}
+                          disabled={loading}
+                          onPress={() => void toggleFollow()}
+                        />
+                      </View>
+                    </View>
                   )}
                   <Text className="mt-2 font-semibold text-slate-900">
                     Publicações

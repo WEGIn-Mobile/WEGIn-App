@@ -1,4 +1,6 @@
 import { Image } from 'expo-image';
+import { apiImageUrl } from '@/api/api-fetch';
+import { useSession } from '@/hooks/use-session';
 import { Text, View } from 'react-native';
 import type { UserSummary } from '@/types/user';
 
@@ -9,6 +11,8 @@ export function Avatar({
   user: Pick<UserSummary, 'name' | 'avatarUrl'>;
   large?: boolean;
 }) {
+  const { token } = useSession();
+  const protectedPhoto = user.avatarUrl?.startsWith('/api/users/') ?? false;
   const initials = user.name
     .split(' ')
     .filter(Boolean)
@@ -22,7 +26,13 @@ export function Avatar({
     >
       {user.avatarUrl ? (
         <Image
-          source={{ uri: user.avatarUrl }}
+          source={{
+            uri: protectedPhoto ? apiImageUrl(user.avatarUrl) : user.avatarUrl,
+            headers:
+              protectedPhoto && token
+                ? { Authorization: `Bearer ${token}` }
+                : undefined,
+          }}
           style={{ width: '100%', height: '100%' }}
           contentFit="cover"
           accessibilityLabel={`Foto de ${user.name}`}

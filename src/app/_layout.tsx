@@ -51,6 +51,11 @@ function Navigation() {
         />
         <Stack.Screen name="post/[id]" options={{ title: 'Publicação' }} />
         <Stack.Screen name="post/comments" options={{ title: 'Comentários' }} />
+        <Stack.Screen
+          name="profile/edit"
+          options={{ title: 'Editar perfil' }}
+        />
+        <Stack.Screen name="user/connections" options={{ title: 'Conexões' }} />
       </Stack.Protected>
     </Stack>
   );
