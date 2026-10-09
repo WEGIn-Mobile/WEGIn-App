@@ -8,6 +8,9 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
+    public readonly code:
+      | 'REQUEST_FAILED'
+      | 'UNSUPPORTED_ENDPOINT' = 'REQUEST_FAILED',
   ) {
     super(message);
     this.name = 'ApiError';
@@ -57,13 +60,24 @@ export async function apiFetch<T>(
       const message = Array.isArray(body?.message)
         ? body.message.join('\n')
         : body?.message;
+      const unsupported =
+        response.status === 404 &&
+        typeof message === 'string' &&
+        /^Cannot\s+(GET|POST|PATCH|DELETE|PUT|HEAD|OPTIONS)\s+\//i.test(
+          message,
+        );
       if (response.status === 401 && token && !path.startsWith('/auth/'))
         onUnauthorized?.();
       throw new ApiError(
-        response.status === 429
-          ? 'Muitas solicitações. Aguarde alguns segundos e tente novamente.'
-          : message || 'Não foi possível concluir a solicitação.',
+        unsupported
+          ? 'Este recurso está temporariamente indisponível. Tente novamente mais tarde.'
+          : response.status >= 500
+            ? 'O serviço está temporariamente indisponível. Tente novamente mais tarde.'
+            : response.status === 429
+              ? 'Muitas solicitações. Aguarde alguns segundos e tente novamente.'
+              : message || 'Não foi possível concluir a solicitação.',
         response.status,
+        unsupported ? 'UNSUPPORTED_ENDPOINT' : 'REQUEST_FAILED',
       );
     }
     return response.status === 204 ? (undefined as T) : await response.json();
