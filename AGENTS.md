@@ -70,6 +70,7 @@ Centralize a configuração HTTP e o tratamento comum de erros em `src/api/`. Ar
 * Os endpoints ficam em `src/api/`. Use `apiFetch` para aplicar o token, normalizar a URL e tratar erros. Não defina Content-Type manualmente para FormData.
 * No Android/iOS, a sessão persiste com Secure Store; na prévia web, o token fica somente em memória. Uma resposta 401 em rota protegida encerra a sessão.
 * Prepare o upload em `PostService` e mantenha os contratos das respostas em `src/types/`. IDs são strings e datas recebidas por JSON são strings.
+* Antes de sair do editor após salvar ou descartar, aguarde a liberação da proteção em `usePreventRemoveContext` e navegue no próximo frame. Bloqueie envios duplicados durante a solicitação e a saída da tela.
 * Reutilize os componentes de `src/components/` e os valores de `src/styles/theme.ts`. As cores de marca para NativeWind estão em `tailwind.config.js`.
 * As listas de posts são atualizadas ao receber foco e usam paginação explícita. Não adicione bibliotecas de estado ou cache para os fluxos simples do MVP.
 

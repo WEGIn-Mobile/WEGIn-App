@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -11,6 +12,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { router, useNavigation } from 'expo-router';
 import {
   usePreventRemove,
+  usePreventRemoveContext,
+  useRoute,
   type NavigationAction,
 } from '@react-navigation/native';
 import { ImagePlus } from 'lucide-react-native';
@@ -33,6 +36,8 @@ import {
 export function PostEditor({ postId }: { postId?: string }) {
   const { user } = useSession();
   const navigation = useNavigation();
+  const route = useRoute();
+  const { preventedRoutes } = usePreventRemoveContext();
   const [post, setPost] = useState<Post | null>(null);
   const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [content, setContent] = useState('');
@@ -45,18 +50,33 @@ export function PostEditor({ postId }: { postId?: string }) {
   const [pendingAction, setPendingAction] = useState<NavigationAction | null>(
     null,
   );
+  const [exitAction, setExitAction] = useState<NavigationAction | null>(null);
+  const submitting = useRef(false);
+  const leaving = useRef(false);
   const dirty = content !== (post?.content ?? '') || !!image;
+  const exiting = saved || !!exitAction;
+  const nativeRemovalPrevented = !!preventedRoutes[route.key]?.preventRemove;
 
-  usePreventRemove(!!user && !saved && (dirty || busy), ({ data }) => {
+  usePreventRemove(!!user && !exiting && (dirty || busy), ({ data }) => {
     if (!busy) setPendingAction(data.action);
   });
 
   useEffect(() => {
-    if (saved) {
+    if (!exiting || nativeRemovalPrevented) return;
+    // The native stack must commit the released guard before removing this screen.
+    const frame = requestAnimationFrame(() => {
+      if (leaving.current) return;
+      leaving.current = true;
+      Keyboard.dismiss();
+      if (exitAction) {
+        navigation.dispatch(exitAction);
+        return;
+      }
       if (router.canGoBack()) router.back();
       else router.replace('/feed');
-    }
-  }, [saved]);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [exiting, nativeRemovalPrevented, exitAction, navigation]);
 
   useEffect(() => {
     if (!postId) return;
@@ -111,18 +131,22 @@ export function PostEditor({ postId }: { postId?: string }) {
   }
 
   async function submit() {
-    if (busy || (postId && !post)) return;
+    if (submitting.current || exiting || (postId && !post)) return;
     if (!postId && !image) {
       setError('Selecione uma foto para publicar.');
       return;
     }
+    submitting.current = true;
+    Keyboard.dismiss();
     setBusy(true);
     setError('');
     try {
       if (postId) await editPost(postId, content.trim());
       else if (image) await publishPost(image, content);
+      setPendingAction(null);
       setSaved(true);
     } catch (cause) {
+      submitting.current = false;
       setError(errorMessage(cause));
     } finally {
       setBusy(false);
@@ -206,7 +230,7 @@ export function PostEditor({ postId }: { postId?: string }) {
               onChangeText={setContent}
               multiline
               maxLength={255}
-              editable={!busy}
+              editable={!busy && !exiting}
               textAlignVertical="top"
               style={{ minHeight: 110 }}
             />
@@ -217,7 +241,7 @@ export function PostEditor({ postId }: { postId?: string }) {
             <Button
               title={postId ? 'Salvar alterações' : 'Publicar'}
               loading={busy}
-              disabled={picking || (postId ? !dirty : !image)}
+              disabled={exiting || picking || (postId ? !dirty : !image)}
               onPress={submit}
             />
           </View>
@@ -230,7 +254,7 @@ export function PostEditor({ postId }: { postId?: string }) {
         confirmLabel="Descartar"
         onCancel={() => setPendingAction(null)}
         onConfirm={() => {
-          if (pendingAction) navigation.dispatch(pendingAction);
+          setExitAction(pendingAction);
           setPendingAction(null);
         }}
       />
