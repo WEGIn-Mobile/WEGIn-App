@@ -1,12 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { Keyboard, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import type { ImagePickerAsset } from 'expo-image-picker';
 import { router, useNavigation } from 'expo-router';
@@ -32,6 +25,7 @@ import type { Post } from '@/types/post';
 import { colors } from '@/styles/theme';
 import { PostImage } from './post-image';
 import { PhotoPermissionNotice } from './photo-permission-notice';
+import { FormScrollView } from './form-scroll-view';
 import {
   Button,
   ConfirmDialog,
@@ -213,105 +207,99 @@ export function PostEditor({ postId }: { postId?: string }) {
 
   return (
     <Screen>
-      <KeyboardAvoidingView
-        className="flex-1"
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={100}
+      <FormScrollView
+        scrollToEndOnKeyboard
+        contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
       >
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
-        >
-          <View className="gap-5">
-            <Text className="text-base leading-6 text-slate-500">
-              {postId
-                ? 'Edite a legenda da sua foto.'
-                : 'Compartilhe um momento com a comunidade.'}
-            </Text>
-            <View className="overflow-hidden rounded-2xl bg-slate-50">
-              {post ? (
-                <PostImage path={post.imageUrl} />
-              ) : image ? (
-                <Image
-                  source={{ uri: image.uri }}
-                  style={{ width: '100%', aspectRatio: 1 }}
-                  contentFit="contain"
-                  accessibilityLabel="Prévia da foto selecionada"
-                />
-              ) : (
-                <View className="aspect-square items-center justify-center gap-4 border border-dashed border-slate-300 p-8">
-                  <ImagePlus size={42} color={colors.brand} />
-                  <Text className="text-lg font-semibold text-slate-800">
-                    Uma foto, um momento
-                  </Text>
-                  <Text className="text-center text-slate-500">
-                    Escolha uma imagem JPEG, PNG ou WebP de até 5 MB.
-                  </Text>
-                  <Button
-                    title="Selecionar foto"
-                    secondary
-                    loading={picking}
-                    disabled={checkingPermissions || exiting}
-                    onPress={() => void pickImage()}
-                  />
-                  <Button
-                    title="Tirar foto"
-                    secondary
-                    disabled={checkingPermissions || picking || exiting}
-                    onPress={() => void pickImage('camera')}
-                  />
-                </View>
-              )}
-            </View>
-            {!postId && image && (
-              <View className="gap-3">
+        <View className="gap-5">
+          <Text className="text-base leading-6 text-slate-500">
+            {postId
+              ? 'Edite a legenda da sua foto.'
+              : 'Compartilhe um momento com a comunidade.'}
+          </Text>
+          <View className="overflow-hidden rounded-2xl bg-slate-50">
+            {post ? (
+              <PostImage path={post.imageUrl} />
+            ) : image ? (
+              <Image
+                source={{ uri: image.uri }}
+                style={{ width: '100%', aspectRatio: 1 }}
+                contentFit="contain"
+                accessibilityLabel="Prévia da foto selecionada"
+              />
+            ) : (
+              <View className="aspect-square items-center justify-center gap-4 border border-dashed border-slate-300 p-8">
+                <ImagePlus size={42} color={colors.brand} />
+                <Text className="text-lg font-semibold text-slate-800">
+                  Uma foto, um momento
+                </Text>
+                <Text className="text-center text-slate-500">
+                  Escolha uma imagem JPEG, PNG ou WebP de até 5 MB.
+                </Text>
                 <Button
-                  title="Trocar foto"
+                  title="Selecionar foto"
                   secondary
-                  disabled={busy || checkingPermissions || exiting}
                   loading={picking}
+                  disabled={checkingPermissions || exiting}
                   onPress={() => void pickImage()}
                 />
                 <Button
                   title="Tirar foto"
                   secondary
-                  disabled={busy || checkingPermissions || picking || exiting}
+                  disabled={checkingPermissions || picking || exiting}
                   onPress={() => void pickImage('camera')}
                 />
               </View>
             )}
-            {!postId && (
-              <PhotoPermissionNotice
-                issues={permissionIssues}
-                disabled={checkingPermissions || picking || busy || exiting}
-                onRetry={(source) => void pickImage(source)}
-                onError={setError}
-              />
-            )}
-            <Field
-              label="Legenda (opcional)"
-              placeholder="O que você quer compartilhar?"
-              defaultValue={post?.content ?? ''}
-              onChangeText={setContent}
-              multiline
-              maxLength={255}
-              editable={!busy && !exiting}
-              textAlignVertical="top"
-              style={{ minHeight: 110 }}
-            />
-            <Text className="text-right text-xs text-slate-500">
-              {content.length}/255
-            </Text>
-            <ErrorNotice message={error} />
-            <Button
-              title={postId ? 'Salvar alterações' : 'Publicar'}
-              loading={busy}
-              disabled={exiting || picking || (postId ? !dirty : !image)}
-              onPress={submit}
-            />
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          {!postId && image && (
+            <View className="gap-3">
+              <Button
+                title="Trocar foto"
+                secondary
+                disabled={busy || checkingPermissions || exiting}
+                loading={picking}
+                onPress={() => void pickImage()}
+              />
+              <Button
+                title="Tirar foto"
+                secondary
+                disabled={busy || checkingPermissions || picking || exiting}
+                onPress={() => void pickImage('camera')}
+              />
+            </View>
+          )}
+          {!postId && (
+            <PhotoPermissionNotice
+              issues={permissionIssues}
+              disabled={checkingPermissions || picking || busy || exiting}
+              onRetry={(source) => void pickImage(source)}
+              onError={setError}
+            />
+          )}
+          <Field
+            label="Legenda (opcional)"
+            placeholder="O que você quer compartilhar?"
+            defaultValue={post?.content ?? ''}
+            onChangeText={setContent}
+            multiline
+            maxLength={255}
+            editable={!busy && !exiting}
+            textAlignVertical="top"
+            style={{ minHeight: 110 }}
+          />
+          <Text className="text-right text-xs text-slate-500">
+            {content.length}/255
+          </Text>
+          <ErrorNotice message={error} />
+          <Button
+            title={postId ? 'Salvar alterações' : 'Publicar'}
+            loading={busy}
+            disabled={exiting || picking || (postId ? !dirty : !image)}
+            onPress={submit}
+          />
+        </View>
+      </FormScrollView>
       <ConfirmDialog
         visible={!!pendingAction}
         title="Descartar alterações?"
