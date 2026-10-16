@@ -25,3 +25,9 @@ export type Conversation = {
 export type MessagePage = Page<Message> & {
   deletedMessages?: Pick<Message, 'id' | 'deletedAt'>[];
 };
+
+export type UnreadCount = {
+  /** Conversas com pelo menos uma mensagem recebida e não lida. */
+  conversations: number;
+  messages: number;
+};

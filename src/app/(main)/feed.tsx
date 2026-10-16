@@ -1,17 +1,23 @@
 import { FlatList, View } from 'react-native';
 import { router } from 'expo-router';
+import { Camera } from 'lucide-react-native';
+import { useTheme } from '@/hooks/use-theme';
+import { useI18n } from '@/i18n';
 import { usePosts } from '@/hooks/use-posts';
 import { PostCard } from '@/components/post-card';
 import {
   Button,
   EmptyState,
   ErrorNotice,
+  ListItemEntrance,
   Loading,
   Screen,
 } from '@/components/common';
 
 export default function FeedScreen() {
   const list = usePosts();
+  const { colors } = useTheme();
+  const { t } = useI18n();
   return (
     <Screen>
       <FlatList
@@ -19,8 +25,10 @@ export default function FeedScreen() {
         keyExtractor={(post) => post.id}
         refreshing={list.loading}
         onRefresh={() => void list.refresh()}
-        renderItem={({ item }) => (
-          <PostCard post={item} onDeleted={list.remove} />
+        renderItem={({ item, index }) => (
+          <ListItemEntrance index={index}>
+            <PostCard post={item} onDeleted={list.remove} />
+          </ListItemEntrance>
         )}
         ListHeaderComponent={
           <ErrorNotice
@@ -33,11 +41,12 @@ export default function FeedScreen() {
             <Loading />
           ) : !list.error ? (
             <EmptyState
-              title="Vamos começar?"
-              description="As fotos da comunidade aparecerão aqui."
+              icon={<Camera size={28} color={colors.accent} />}
+              title={t('feed.emptyTitle')}
+              description={t('feed.emptyDescription')}
               action={
                 <Button
-                  title="Publicar uma foto"
+                  title={t('feed.publishPhoto')}
                   onPress={() => router.push('/post/create')}
                 />
               }
@@ -48,7 +57,7 @@ export default function FeedScreen() {
           list.hasMore ? (
             <View className="p-4">
               <Button
-                title="Carregar mais"
+                title={t('common.loadMore')}
                 secondary
                 loading={list.loadingMore}
                 onPress={() => void list.loadMore()}

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, FlatList, Pressable, Text, View } from 'react-native';
 import { Ban } from 'lucide-react-native';
 import { router, Stack } from 'expo-router';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import {
   deleteMessage,
   getMessages,
@@ -14,7 +14,10 @@ import { sendMessage } from '@/services/MessageService';
 import { usePagedList } from '@/hooks/use-paged-list';
 import { useKeyboardInset } from '@/hooks/use-keyboard-inset';
 import { useSession } from '@/hooks/use-session';
-import { colors } from '@/styles/theme';
+import { useTheme } from '@/hooks/use-theme';
+import { useUnread } from '@/hooks/use-unread';
+import { useI18n } from '@/i18n';
+import { successFeedback } from '@/lib/haptics';
 import type { Message } from '@/types/message';
 import type { User } from '@/types/user';
 import { Avatar } from './avatar';
@@ -27,10 +30,16 @@ import {
   Screen,
 } from './common';
 import { MessageComposer } from './message-composer';
+import { ReadReceipt } from './unread-badge';
 
 const key = (message: Message) => message.id;
 export function Chat({ userId }: { userId: string }) {
   const { user } = useSession();
+  const { colors } = useTheme();
+  const { t, formatDate } = useI18n();
+  const unread = useUnread();
+  const refreshUnread = unread.refresh;
+  const [mountedAt] = useState(() => Date.now());
   const [profile, setProfile] = useState<User | null>(null);
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
@@ -42,9 +51,7 @@ export function Chat({ userId }: { userId: string }) {
   const deletedMessages = useRef(new Map<string, string>());
   const reconcile = useCallback((message: Message) => {
     const deletedAt = deletedMessages.current.get(message.id);
-    return deletedAt
-      ? { ...message, deletedAt, content: 'Mensagem excluída pelo usuário' }
-      : message;
+    return deletedAt ? { ...message, deletedAt, content: '' } : message;
   }, []);
   const view = useRef<FlatList<Message>>(null);
   const { containerRef, keyboardInset, updateKeyboardInset } =
@@ -75,6 +82,7 @@ export function Chat({ userId }: { userId: string }) {
           await markConversationRead(userId, incoming.id, signal);
           if (!signal.aborted) {
             setReadError('');
+            refreshUnread();
           }
           const readAt = new Date().toISOString();
           return {
@@ -91,7 +99,7 @@ export function Chat({ userId }: { userId: string }) {
       }
       return { ...page, items };
     },
-    [userId, user?.id],
+    [userId, user?.id, refreshUnread],
   );
   const list = usePagedList(fetchPage, key, {
     pollMs: 7000,
@@ -134,12 +142,14 @@ export function Chat({ userId }: { userId: string }) {
     <Screen>
       <Stack.Screen
         options={{
-          title: profile?.name ?? 'Conversa',
+          title: profile?.name ?? t('screens.chat'),
           headerTitle: () =>
             profile ? (
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`Ver perfil de ${profile.name}`}
+                accessibilityLabel={t('common.viewProfileOf', {
+                  name: profile.name,
+                })}
                 className="flex-row items-center gap-3"
                 onPress={() =>
                   router.push({
@@ -150,14 +160,14 @@ export function Chat({ userId }: { userId: string }) {
               >
                 <Avatar user={profile} />
                 <View>
-                  <Text className="font-semibold text-slate-900">
-                    {profile.name}
+                  <Text className="font-semibold text-fg">{profile.name}</Text>
+                  <Text className="text-xs text-muted">
+                    {t('chat.viewProfile')}
                   </Text>
-                  <Text className="text-xs text-slate-500">Ver perfil</Text>
                 </View>
               </Pressable>
             ) : (
-              <Text>Conversa</Text>
+              <Text className="font-semibold text-fg">{t('screens.chat')}</Text>
             ),
         }}
       />
@@ -176,14 +186,14 @@ export function Chat({ userId }: { userId: string }) {
         <ErrorNotice message={readError} onRetry={() => void list.refresh()} />
         {list.loading && !list.items.length ? (
           <View className="flex-1 justify-center">
-            <Loading label="Carregando mensagens..." />
+            <Loading label={t('chat.loading')} />
           </View>
         ) : !list.items.length ? (
           <View className="flex-1 justify-center">
             {!list.error && (
               <EmptyState
-                title="Comece a conversa"
-                description="Envie uma mensagem privada para este perfil."
+                title={t('chat.emptyTitle')}
+                description={t('chat.emptyDescription')}
               />
             )}
           </View>
@@ -199,9 +209,12 @@ export function Chat({ userId }: { userId: string }) {
             renderItem={({ item }) => {
               const own = item.senderId === user?.id;
               const canDelete = own && !item.deletedAt;
+              const fresh = new Date(item.createdAt).getTime() > mountedAt;
               return (
                 <Animated.View
-                  entering={FadeIn.duration(180)}
+                  entering={
+                    fresh ? FadeInDown.duration(260) : FadeIn.duration(180)
+                  }
                   style={{
                     alignSelf: own ? 'flex-end' : 'flex-start',
                     maxWidth: '82%',
@@ -214,16 +227,14 @@ export function Chat({ userId }: { userId: string }) {
                     onLongPress={() => setSelected(item)}
                     accessibilityRole={canDelete ? 'button' : undefined}
                     accessibilityLabel={
-                      item.deletedAt
-                        ? 'Mensagem excluída pelo usuário'
-                        : item.content
+                      item.deletedAt ? t('messages.deleted') : item.content
                     }
                     accessibilityHint={
-                      canDelete ? 'Segure para excluir esta mensagem.' : undefined
+                      canDelete ? t('chat.holdToDelete') : undefined
                     }
                     accessibilityActions={
                       canDelete
-                        ? [{ name: 'delete', label: 'Excluir mensagem' }]
+                        ? [{ name: 'delete', label: t('chat.deleteAction') }]
                         : undefined
                     }
                     onAccessibilityAction={({ nativeEvent }) => {
@@ -234,33 +245,38 @@ export function Chat({ userId }: { userId: string }) {
                       )
                         setSelected(item);
                     }}
-                    className={`rounded-2xl px-4 py-3 ${own && !item.deletedAt ? 'bg-brand-500' : 'bg-slate-100'}`}
+                    className={`rounded-2xl px-4 py-3 ${own && !item.deletedAt ? 'rounded-br-md bg-brand-500' : `bg-surface-strong ${own ? 'rounded-br-md' : 'rounded-bl-md'}`}`}
                   >
                     {item.deletedAt ? (
                       <View className="flex-row items-center gap-2">
                         <Ban size={16} color={colors.muted} />
-                        <Text className="italic leading-6 text-slate-500">
-                          Mensagem excluída pelo usuário
+                        <Text className="italic leading-6 text-muted">
+                          {t('messages.deleted')}
                         </Text>
                       </View>
                     ) : (
                       <Text
                         selectable={!own}
-                        className={`text-base leading-6 ${own ? 'text-white' : 'text-slate-800'}`}
+                        className={`text-base leading-6 ${own ? 'text-on-brand' : 'text-fg'}`}
                       >
                         {item.content}
                       </Text>
                     )}
-                    <Text
-                      className={`mt-1 text-right text-xs ${own && !item.deletedAt ? 'text-white/80' : 'text-slate-500'}`}
-                    >
-                      {new Date(item.createdAt).toLocaleString('pt-BR', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </Text>
+                    <View className="mt-1 flex-row items-center justify-end gap-1">
+                      <Text
+                        className={`text-xs ${own && !item.deletedAt ? 'text-on-brand/80' : 'text-muted'}`}
+                      >
+                        {formatDate(item.createdAt, {
+                          day: '2-digit',
+                          month: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </Text>
+                      {own && !item.deletedAt && (
+                        <ReadReceipt read={!!item.readAt} onBrand />
+                      )}
+                    </View>
                   </Pressable>
                 </Animated.View>
               );
@@ -269,7 +285,7 @@ export function Chat({ userId }: { userId: string }) {
               list.hasMore ? (
                 <View className="py-3">
                   <Button
-                    title="Mensagens anteriores"
+                    title={t('chat.older')}
                     secondary
                     loading={list.loadingMore}
                     onPress={() => void list.loadMore()}
@@ -280,11 +296,12 @@ export function Chat({ userId }: { userId: string }) {
           />
         )}
         <MessageComposer
-          placeholder="Mensagem..."
+          placeholder={t('chat.placeholder')}
           maxLength={1000}
           disabled={!profile || !user || userId === user.id}
           onSend={async (text) => {
             await sendMessage(userId, user!.id, text);
+            successFeedback();
             await list.refresh();
             view.current?.scrollToOffset({ offset: 0, animated: true });
           }}
@@ -292,9 +309,9 @@ export function Chat({ userId }: { userId: string }) {
       </View>
       <ConfirmDialog
         visible={!!selected}
-        title="Excluir mensagem?"
-        description="A mensagem será substituída por um aviso de exclusão para os dois perfis."
-        confirmLabel="Excluir mensagem"
+        title={t('chat.deleteTitle')}
+        description={t('chat.deleteDescription')}
+        confirmLabel={t('chat.deleteAction')}
         loading={deleting}
         onConfirm={() => void remove()}
         onCancel={() => setSelected(null)}

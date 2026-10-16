@@ -22,7 +22,8 @@ import {
 } from '@/services/PostPhotoService';
 import { useSession } from '@/hooks/use-session';
 import type { Post } from '@/types/post';
-import { colors } from '@/styles/theme';
+import { useTheme } from '@/hooks/use-theme';
+import { t as translate, useI18n } from '@/i18n';
 import { PostImage } from './post-image';
 import { PhotoPermissionNotice } from './photo-permission-notice';
 import { FormScrollView } from './form-scroll-view';
@@ -37,6 +38,8 @@ import {
 
 export function PostEditor({ postId }: { postId?: string }) {
   const { user } = useSession();
+  const { colors } = useTheme();
+  const { t } = useI18n();
   const navigation = useNavigation();
   const route = useRoute();
   const { preventedRoutes } = usePreventRemoveContext();
@@ -47,10 +50,12 @@ export function PostEditor({ postId }: { postId?: string }) {
   const [busy, setBusy] = useState(false);
   const [picking, setPicking] = useState(false);
   const [checkingPermissions, setCheckingPermissions] = useState(!postId);
-  const [permissionIssues, setPermissionIssues] = useState<PhotoPermissionIssue[]>(
-    [],
+  const [permissionIssues, setPermissionIssues] = useState<
+    PhotoPermissionIssue[]
+  >([]);
+  const permissionRequest = useRef<Promise<PhotoPermissionIssue[]> | null>(
+    null,
   );
-  const permissionRequest = useRef<Promise<PhotoPermissionIssue[]> | null>(null);
   const pickerOpen = useRef(false);
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
@@ -97,9 +102,7 @@ export function PostEditor({ postId }: { postId?: string }) {
       })
       .catch(() => {
         if (active) {
-          setError(
-            'Não foi possível verificar as permissões. Tente selecionar a foto novamente.',
-          );
+          setError(translate('editor.permissionsFailed'));
         }
       })
       .finally(() => {
@@ -119,7 +122,7 @@ export function PostEditor({ postId }: { postId?: string }) {
       .then((result) => {
         if (!active) return;
         if (result.authorId !== user?.id) {
-          setError('Você só pode editar suas próprias publicações.');
+          setError(translate('editor.onlyOwn'));
           return;
         }
         setPost(result);
@@ -155,9 +158,7 @@ export function PostEditor({ postId }: { postId?: string }) {
         ]);
       } else {
         setError(
-          cause instanceof Error
-            ? cause.message
-            : 'Não foi possível abrir a foto. Tente novamente.',
+          cause instanceof Error ? cause.message : t('editor.photoFailed'),
         );
       }
     } finally {
@@ -169,7 +170,7 @@ export function PostEditor({ postId }: { postId?: string }) {
   async function submit() {
     if (submitting.current || exiting || (postId && !post)) return;
     if (!postId && !image) {
-      setError('Selecione uma foto para publicar.');
+      setError(t('editor.photoRequired'));
       return;
     }
     submitting.current = true;
@@ -212,12 +213,10 @@ export function PostEditor({ postId }: { postId?: string }) {
         contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
       >
         <View className="gap-5">
-          <Text className="text-base leading-6 text-slate-500">
-            {postId
-              ? 'Edite a legenda da sua foto.'
-              : 'Compartilhe um momento com a comunidade.'}
+          <Text className="text-base leading-6 text-muted">
+            {postId ? t('editor.editIntro') : t('editor.createIntro')}
           </Text>
-          <View className="overflow-hidden rounded-2xl bg-slate-50">
+          <View className="overflow-hidden rounded-2xl bg-surface">
             {post ? (
               <PostImage path={post.imageUrl} />
             ) : image ? (
@@ -225,26 +224,27 @@ export function PostEditor({ postId }: { postId?: string }) {
                 source={{ uri: image.uri }}
                 style={{ width: '100%', aspectRatio: 1 }}
                 contentFit="contain"
-                accessibilityLabel="Prévia da foto selecionada"
+                accessibilityLabel={t('editor.preview')}
+                transition={250}
               />
             ) : (
-              <View className="aspect-square items-center justify-center gap-4 border border-dashed border-slate-300 p-8">
-                <ImagePlus size={42} color={colors.brand} />
-                <Text className="text-lg font-semibold text-slate-800">
-                  Uma foto, um momento
+              <View className="aspect-square items-center justify-center gap-4 border border-dashed border-line p-8">
+                <ImagePlus size={42} color={colors.accent} />
+                <Text className="text-lg font-semibold text-fg">
+                  {t('editor.emptyTitle')}
                 </Text>
-                <Text className="text-center text-slate-500">
-                  Escolha uma imagem JPEG, PNG ou WebP de até 5 MB.
+                <Text className="text-center text-muted">
+                  {t('editor.emptyDescription')}
                 </Text>
                 <Button
-                  title="Selecionar foto"
+                  title={t('editor.selectPhoto')}
                   secondary
                   loading={picking}
                   disabled={checkingPermissions || exiting}
                   onPress={() => void pickImage()}
                 />
                 <Button
-                  title="Tirar foto"
+                  title={t('editor.takePhoto')}
                   secondary
                   disabled={checkingPermissions || picking || exiting}
                   onPress={() => void pickImage('camera')}
@@ -255,14 +255,14 @@ export function PostEditor({ postId }: { postId?: string }) {
           {!postId && image && (
             <View className="gap-3">
               <Button
-                title="Trocar foto"
+                title={t('editor.changePhoto')}
                 secondary
                 disabled={busy || checkingPermissions || exiting}
                 loading={picking}
                 onPress={() => void pickImage()}
               />
               <Button
-                title="Tirar foto"
+                title={t('editor.takePhoto')}
                 secondary
                 disabled={busy || checkingPermissions || picking || exiting}
                 onPress={() => void pickImage('camera')}
@@ -278,8 +278,8 @@ export function PostEditor({ postId }: { postId?: string }) {
             />
           )}
           <Field
-            label="Legenda (opcional)"
-            placeholder="O que você quer compartilhar?"
+            label={t('editor.caption')}
+            placeholder={t('editor.captionPlaceholder')}
             defaultValue={post?.content ?? ''}
             onChangeText={setContent}
             multiline
@@ -288,12 +288,12 @@ export function PostEditor({ postId }: { postId?: string }) {
             textAlignVertical="top"
             style={{ minHeight: 110 }}
           />
-          <Text className="text-right text-xs text-slate-500">
+          <Text className="text-right text-xs text-muted">
             {content.length}/255
           </Text>
           <ErrorNotice message={error} />
           <Button
-            title={postId ? 'Salvar alterações' : 'Publicar'}
+            title={postId ? t('editor.save') : t('editor.publish')}
             loading={busy}
             disabled={exiting || picking || (postId ? !dirty : !image)}
             onPress={submit}
@@ -302,9 +302,9 @@ export function PostEditor({ postId }: { postId?: string }) {
       </FormScrollView>
       <ConfirmDialog
         visible={!!pendingAction}
-        title="Descartar alterações?"
-        description="As alterações que você fez ainda não foram salvas."
-        confirmLabel="Descartar"
+        title={t('common.discardTitle')}
+        description={t('editor.discardDescription')}
+        confirmLabel={t('common.discard')}
         onCancel={() => setPendingAction(null)}
         onConfirm={() => {
           setExitAction(pendingAction);

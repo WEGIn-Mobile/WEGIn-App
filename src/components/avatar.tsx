@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import { apiImageUrl } from '@/api/api-fetch';
 import { useSession } from '@/hooks/use-session';
+import { useI18n } from '@/i18n';
 import { Text, View } from 'react-native';
 import type { UserSummary } from '@/types/user';
 
@@ -12,6 +13,7 @@ export function Avatar({
   large?: boolean;
 }) {
   const { token } = useSession();
+  const { t } = useI18n();
   const protectedPhoto = user.avatarUrl?.startsWith('/api/users/') ?? false;
   const initials = user.name
     .split(' ')
@@ -35,11 +37,12 @@ export function Avatar({
           }}
           style={{ width: '100%', height: '100%' }}
           contentFit="cover"
-          accessibilityLabel={`Foto de ${user.name}`}
+          accessibilityLabel={t('common.photoOf', { name: user.name })}
+          transition={200}
         />
       ) : (
         <Text
-          className={`font-bold text-brand-500 ${large ? 'text-2xl' : 'text-sm'}`}
+          className={`font-bold text-accent ${large ? 'text-2xl' : 'text-sm'}`}
         >
           {initials}
         </Text>

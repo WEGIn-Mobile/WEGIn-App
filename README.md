@@ -61,13 +61,14 @@ npm run lint
 - `src/hooks/`: sessão e listagem de publicações.
 - `src/components/`: formulários, perfil e componentes reutilizáveis.
 - `src/types/`: contratos das respostas.
-- `src/styles/`: valores compartilhados da interface.
+- `src/styles/`: tokens de cor dos temas claro e escuro.
+- `src/i18n/`: traduções (português, inglês e espanhol) e formatação de datas.
 
 A sessão usa Secure Store no Android/iOS. Na prévia web, o token fica apenas em memória e o usuário entra novamente ao recarregar a página. Uma resposta 401 de uma rota protegida encerra a sessão.
 
 O backend aceita uma imagem JPEG, PNG ou WebP de até 5 MB por publicação ou avatar. A edição de publicação altera a legenda; a foto é escolhida na criação. Comentários aceitam até 255 caracteres, mensagens até 1000 e a bio até 160.
 
-O chat consulta a API a cada 7 segundos enquanto a conversa estiver em foco; a lista de conversas atualiza a cada 15 segundos. Essas consultas param com o app em segundo plano. O histórico usa paginação explícita e recupera mensagens recebidas durante pausas. A lista de conversas mostra um ponto verde quando há mensagens recebidas ainda não lidas. Ao abrir o chat, somente mensagens recebidas até o marcador exibido são marcadas como lidas. Não há indicadores de presença.
+O chat consulta a API a cada 7 segundos enquanto a conversa estiver em foco; a lista de conversas atualiza a cada 15 segundos. Essas consultas param com o app em segundo plano. O histórico usa paginação explícita e recupera mensagens recebidas durante pausas. A lista de conversas mostra, como no WhatsApp, o horário em verde e um contador verde com as mensagens recebidas ainda não lidas; a aba Mensagens exibe um badge verde com o número de conversas não lidas (atualizado a cada 20 segundos com o app ativo). Mensagens próprias mostram ✓ (enviada) ou ✓✓ (lida). Ao abrir o chat, somente mensagens recebidas até o marcador exibido são marcadas como lidas. Não há indicadores de presença.
 
 Para excluir uma mensagem própria, segure a mensagem e confirme a exclusão. A mensagem permanece no histórico como “Mensagem excluída pelo usuário” para os dois perfis. As exclusões de mensagens antigas também são sincronizadas enquanto a conversa está aberta.
 
@@ -76,6 +77,8 @@ Os contadores do perfil são calculados pelas listas de seguidores e seguindo, q
 As notificações foram removidas do aplicativo: não há tela, alertas push, solicitação de permissão ou chamadas aos endpoints de notificações. Respostas de rota ausente geram avisos amigáveis, preservando o erro real para não simular sucesso.
 
 As permissões de câmera e galeria são verificadas na criação de publicação e na edição do perfil, e novamente antes de selecionar a fonte. No Android 13+, o seletor de fotos do sistema autoriza somente a imagem escolhida. Quando o sistema impede uma nova solicitação, a interface oferece abrir as configurações.
+
+O app segue o tema (claro/escuro) e o idioma do dispositivo. São suportados português, inglês e espanhol; em qualquer outro idioma, o app usa inglês. Em **Meu perfil > ⚙ Preferências** é possível fixar o tema e o idioma, e a escolha fica salva no aparelho. Como `userInterfaceStyle` agora é `automatic` e `expo-localization` é um módulo nativo, gere um novo APK para que essas mudanças valham no aparelho.
 
 ## API e migração das funcionalidades sociais
 
@@ -87,6 +90,15 @@ npx prisma generate
 npm run dev
 ```
 
-A migração `20261009120000_social_activity` adiciona os campos de imagem em `users`. Ela também inclui tabelas de notificações e dispositivos da implementação anterior; o app não usa esses recursos. Comentários, seguidores e envio de mensagens usam os endpoints existentes.
+A migração `20261016120000_add_avatars_and_message_status` (branch `feat/social-mvp-backend`) adiciona a foto de perfil em `users` e `readAt`/`deletedAt` às mensagens. Ela acompanha os endpoints usados pelo app:
 
-A migração `20261009140000_message_receipts_and_deletion` adiciona `readAt` e `deletedAt` às mensagens. A API no Render deve receber as duas migrações e os novos endpoints antes de usar avatar, indicadores de leitura ou exclusão no APK. A branch de publicação é `feat/social-mvp-backend`. O build da API gera o cliente Prisma, e `npm start` / `npm run start:prod` aplicam as migrações pendentes antes de iniciar o servidor.
+| Endpoint | Uso |
+| --- | --- |
+| `POST /users/me/avatar` (multipart, campo `image`) | Envia ou troca a foto de perfil |
+| `DELETE /users/me/avatar` | Remove a foto de perfil |
+| `GET /users/:id/avatar` | Imagem da foto de perfil (requer token) |
+| `GET /messages/unread-count` | Conversas e mensagens não lidas (badge da aba) |
+| `PATCH /messages/:userId/read` (`{ throughId }`) | Marca como lidas as mensagens recebidas até o marcador |
+| `DELETE /messages/:id` | Exclui uma mensagem própria, mantendo o aviso de exclusão |
+
+A API publicada (Render) precisa receber essa migração (`npx prisma migrate deploy`) e o novo código antes de distribuir um APK que use foto de perfil, indicadores de leitura, badge de não lidas ou exclusão de mensagens.

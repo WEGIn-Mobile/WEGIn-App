@@ -14,6 +14,10 @@ import {
 } from '@/services/PostPhotoService';
 import { useSession } from '@/hooks/use-session';
 import { useEditorExit } from '@/hooks/use-editor-exit';
+import { useTheme } from '@/hooks/use-theme';
+import { useI18n } from '@/i18n';
+import { Camera, ImageUp, Trash2 } from 'lucide-react-native';
+import Animated, { ZoomIn } from 'react-native-reanimated';
 import { Avatar } from './avatar';
 import { FormScrollView } from './form-scroll-view';
 import { PhotoPermissionNotice } from './photo-permission-notice';
@@ -21,6 +25,8 @@ import { Button, ConfirmDialog, ErrorNotice, Field, Screen } from './common';
 
 export function ProfileEditor() {
   const session = useSession();
+  const { colors } = useTheme();
+  const { t } = useI18n();
   const initial = useRef(session.user).current!;
   const [name, setName] = useState(initial.name);
   const [username, setUsername] = useState(initial.username);
@@ -112,11 +118,14 @@ export function ProfileEditor() {
         <View className="gap-5">
           <View className="items-center gap-3">
             {photo ? (
-              <Image
-                source={{ uri: photo.uri }}
-                style={{ width: 96, height: 96, borderRadius: 48 }}
-                accessibilityLabel="Prévia da foto de perfil"
-              />
+              <Animated.View key={photo.uri} entering={ZoomIn.duration(260)}>
+                <Image
+                  source={{ uri: photo.uri }}
+                  style={{ width: 96, height: 96, borderRadius: 48 }}
+                  accessibilityLabel={t('profileEditor.preview')}
+                  transition={200}
+                />
+              </Animated.View>
             ) : (
               <Avatar
                 user={{
@@ -126,23 +135,23 @@ export function ProfileEditor() {
                 large
               />
             )}
-            <Text className="text-slate-500">
-              Sua foto aparece nos posts e nas conversas.
-            </Text>
+            <Text className="text-muted">{t('profileEditor.photoHint')}</Text>
           </View>
           <View className="flex-row gap-3">
             <View className="flex-1">
               <Button
-                title="Galeria"
+                title={t('profileEditor.gallery')}
                 secondary
+                icon={<ImageUp size={18} color={colors.accent} />}
                 disabled={disabled}
                 onPress={() => void pick('library')}
               />
             </View>
             <View className="flex-1">
               <Button
-                title="Câmera"
+                title={t('profileEditor.camera')}
                 secondary
+                icon={<Camera size={18} color={colors.accent} />}
                 disabled={disabled}
                 onPress={() => void pick('camera')}
               />
@@ -150,8 +159,9 @@ export function ProfileEditor() {
           </View>
           {(photo || session.user?.avatarUrl) && !removing && (
             <Button
-              title="Remover foto"
+              title={t('profileEditor.removePhoto')}
               secondary
+              icon={<Trash2 size={18} color={colors.accent} />}
               disabled={disabled}
               onPress={() => {
                 setPhoto(null);
@@ -166,14 +176,14 @@ export function ProfileEditor() {
             onError={setError}
           />
           <Field
-            label="Nome"
+            label={t('auth.name')}
             defaultValue={initial.name}
             onChangeText={setName}
             maxLength={60}
             editable={!disabled}
           />
           <Field
-            label="Nome de usuário"
+            label={t('auth.username')}
             defaultValue={initial.username}
             onChangeText={setUsername}
             autoCapitalize="none"
@@ -182,22 +192,22 @@ export function ProfileEditor() {
             editable={!disabled}
           />
           <Field
-            label="Bio"
+            label={t('profileEditor.bio')}
             defaultValue={initial.bio ?? ''}
             onChangeText={setBio}
-            placeholder="Conte um pouco sobre você"
+            placeholder={t('profileEditor.bioPlaceholder')}
             maxLength={160}
             multiline
             textAlignVertical="top"
             style={{ minHeight: 100 }}
             editable={!disabled}
           />
-          <Text className="text-right text-xs text-slate-500">
+          <Text className="text-right text-xs text-muted">
             {bio.length}/160
           </Text>
           <ErrorNotice message={error} />
           <Button
-            title="Salvar perfil"
+            title={t('profileEditor.save')}
             loading={busy}
             disabled={disabled || !dirty}
             onPress={() => void save()}
@@ -206,9 +216,9 @@ export function ProfileEditor() {
       </FormScrollView>
       <ConfirmDialog
         visible={!!exit.pending}
-        title="Descartar alterações?"
-        description="As alterações do perfil ainda não foram salvas."
-        confirmLabel="Descartar"
+        title={t('common.discardTitle')}
+        description={t('profileEditor.discardDescription')}
+        confirmLabel={t('common.discard')}
         onConfirm={exit.discard}
         onCancel={exit.cancel}
       />

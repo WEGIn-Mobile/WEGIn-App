@@ -6,7 +6,7 @@
     "icon": "./assets/logos/wegin_logo_app.png",
     "orientation": "portrait",
     "scheme": "wegin",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": { "supportsTablet": true },
     "android": {
@@ -23,7 +23,11 @@
         {
           "backgroundColor": "#FFFFFF",
           "image": "./assets/images/splash.png",
-          "imageWidth": 1
+          "imageWidth": 1,
+          "dark": {
+            "backgroundColor": "#0B1120",
+            "image": "./assets/images/splash.png"
+          }
         }
       ],
       "expo-secure-store",
@@ -35,7 +39,8 @@
           "microphonePermission": false
         }
       ],
-      "./scripts/with-camera-permission"
+      "./scripts/with-camera-permission",
+      "expo-localization"
     ],
     "experiments": { "typedRoutes": true, "reactCompiler": true }
   }

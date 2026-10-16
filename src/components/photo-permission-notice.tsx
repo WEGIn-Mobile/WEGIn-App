@@ -3,6 +3,7 @@ import type {
   PhotoPermissionIssue,
   PostPhotoSource,
 } from '@/services/PostPhotoService';
+import { useI18n } from '@/i18n';
 import { Button } from './common';
 
 export function PhotoPermissionNotice({
@@ -16,22 +17,22 @@ export function PhotoPermissionNotice({
   onRetry: (source: PostPhotoSource) => void;
   onError: (message: string) => void;
 }) {
+  const { t } = useI18n();
   return issues.map(({ source, canAskAgain }) => (
-    <View key={source} className="gap-3 rounded-xl bg-slate-50 p-4">
-      <Text className="leading-6 text-slate-600">
+    <View key={source} className="gap-3 rounded-xl bg-surface p-4">
+      <Text className="leading-6 text-fg-soft">
         {source === 'camera'
-          ? 'Permita o acesso à câmera para tirar fotos.'
-          : 'Permita o acesso às fotos para selecionar uma imagem.'}{' '}
-        {!canAskAgain &&
-          'Ative a permissão nas configurações do celular e tente novamente.'}
+          ? t('photos.noticeCamera')
+          : t('photos.noticeLibrary')}{' '}
+        {!canAskAgain && t('photos.openSettingsHint')}
       </Text>
       <Button
         title={
           canAskAgain
             ? source === 'camera'
-              ? 'Permitir câmera'
-              : 'Permitir fotos'
-            : 'Abrir configurações'
+              ? t('photos.allowCamera')
+              : t('photos.allowPhotos')
+            : t('photos.openSettings')
         }
         secondary
         disabled={disabled}
@@ -39,7 +40,7 @@ export function PhotoPermissionNotice({
           if (canAskAgain) onRetry(source);
           else {
             void Linking.openSettings().catch(() =>
-              onError('Não foi possível abrir as configurações do celular.'),
+              onError(t('photos.settingsFailed')),
             );
           }
         }}

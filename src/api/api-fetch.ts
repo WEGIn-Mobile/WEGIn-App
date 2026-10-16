@@ -1,4 +1,5 @@
 import { getAccessToken } from '@/lib/secure-storage';
+import { getLanguage, t, type TranslationKey } from '@/i18n';
 
 const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL;
 const API_URL = configuredApiUrl?.trim().replace(/\/+$/, '');
@@ -9,8 +10,7 @@ export class ApiError extends Error {
     message: string,
     public readonly status: number,
     public readonly code:
-      | 'REQUEST_FAILED'
-      | 'UNSUPPORTED_ENDPOINT' = 'REQUEST_FAILED',
+      'REQUEST_FAILED' | 'UNSUPPORTED_ENDPOINT' = 'REQUEST_FAILED',
   ) {
     super(message);
     this.name = 'ApiError';
@@ -27,17 +27,32 @@ export function apiImageUrl(path: string) {
 }
 
 export function errorMessage(error: unknown) {
-  return error instanceof Error
-    ? error.message
-    : 'Algo deu errado. Tente novamente.';
+  return error instanceof Error ? error.message : t('errors.generic');
+}
+
+const statusMessages: Partial<Record<number, TranslationKey>> = {
+  400: 'errors.badRequest',
+  401: 'errors.unauthorized',
+  403: 'errors.forbidden',
+  404: 'errors.notFound',
+  409: 'errors.conflict',
+  413: 'errors.tooLarge',
+};
+
+// A API responde em português. Nos outros idiomas, usa uma mensagem traduzida
+// pelo status para não misturar idiomas na interface.
+function requestErrorMessage(status: number, message: unknown) {
+  if (getLanguage() === 'pt' && typeof message === 'string' && message)
+    return message;
+  const key = statusMessages[status];
+  return key ? t(key) : t('errors.requestFailed');
 }
 
 export async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  if (!API_URL)
-    throw new Error('Configure EXPO_PUBLIC_API_URL para conectar à API.');
+  if (!API_URL) throw new Error(t('errors.noApiUrl'));
   const token = await getAccessToken();
   const headers = new Headers(options.headers);
   if (token && !headers.has('Authorization'))
@@ -70,12 +85,12 @@ export async function apiFetch<T>(
         onUnauthorized?.();
       throw new ApiError(
         unsupported
-          ? 'Este recurso está temporariamente indisponível. Tente novamente mais tarde.'
+          ? t('errors.unsupported')
           : response.status >= 500
-            ? 'O serviço está temporariamente indisponível. Tente novamente mais tarde.'
+            ? t('errors.server')
             : response.status === 429
-              ? 'Muitas solicitações. Aguarde alguns segundos e tente novamente.'
-              : message || 'Não foi possível concluir a solicitação.',
+              ? t('errors.tooMany')
+              : requestErrorMessage(response.status, message),
         response.status,
         unsupported ? 'UNSUPPORTED_ENDPOINT' : 'REQUEST_FAILED',
       );
@@ -83,9 +98,7 @@ export async function apiFetch<T>(
     return response.status === 204 ? (undefined as T) : await response.json();
   } catch (error) {
     if (options.signal?.aborted || error instanceof ApiError) throw error;
-    throw new Error(
-      'Não foi possível conectar. Verifique sua conexão e tente novamente.',
-    );
+    throw new Error(t('errors.network'));
   } finally {
     clearTimeout(timeout);
     options.signal?.removeEventListener('abort', abort);

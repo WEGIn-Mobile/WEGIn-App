@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { t } from '@/i18n';
 
 export type PostPhotoSource = 'camera' | 'library';
 export type PhotoPermissionIssue = {
@@ -11,8 +12,8 @@ export class PhotoPermissionError extends Error {
   constructor(public readonly issue: PhotoPermissionIssue) {
     super(
       issue.source === 'camera'
-        ? 'Permita o acesso à câmera para tirar uma foto.'
-        : 'Permita o acesso às fotos para selecionar uma imagem.',
+        ? t('photos.cameraDenied')
+        : t('photos.libraryDenied'),
     );
     this.name = 'PhotoPermissionError';
   }
@@ -78,15 +79,15 @@ export async function pickPostPhoto(source: PostPhotoSource) {
   } catch {
     throw new Error(
       source === 'camera'
-        ? 'Não foi possível abrir a câmera. Tente novamente.'
-        : 'Não foi possível abrir a galeria. Tente novamente.',
+        ? t('photos.cameraFailed')
+        : t('photos.libraryFailed'),
     );
   }
   if (result.canceled) return null;
   const image = result.assets[0];
-  if (!image) throw new Error('Selecione a foto novamente.');
+  if (!image) throw new Error(t('photos.reselect'));
   if ((image.fileSize ?? image.file?.size ?? 0) > 5 * 1024 * 1024) {
-    throw new Error('Escolha uma foto de até 5 MB.');
+    throw new Error(t('photos.tooLarge'));
   }
   return image;
 }

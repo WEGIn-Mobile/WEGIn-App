@@ -9,13 +9,15 @@ import { usePagedList } from '@/hooks/use-paged-list';
 import { useSession } from '@/hooks/use-session';
 import { useKeyboardInset } from '@/hooks/use-keyboard-inset';
 import type { Post } from '@/types/post';
-import { colors } from '@/styles/theme';
+import { useTheme } from '@/hooks/use-theme';
+import { useI18n } from '@/i18n';
 import { Avatar } from './avatar';
 import {
   Button,
   ConfirmDialog,
   EmptyState,
   ErrorNotice,
+  ListItemEntrance,
   Loading,
   Screen,
 } from './common';
@@ -24,6 +26,8 @@ import { MessageComposer } from './message-composer';
 const key = (item: Post) => item.id;
 export function Comments({ postId }: { postId: string }) {
   const { user } = useSession();
+  const { colors } = useTheme();
+  const { t, formatDate } = useI18n();
   const fetchPage = useCallback(
     (skip: number, signal: AbortSignal) => getComments(postId, skip, signal),
     [postId],
@@ -76,48 +80,55 @@ export function Comments({ postId }: { postId: string }) {
               <ErrorNotice message={error} />
             </>
           }
-          renderItem={({ item }) => (
-            <View className="flex-row gap-3 border-b border-slate-100 px-4 py-4">
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Ver perfil de ${item.author.name}`}
-                onPress={() =>
-                  router.push({
-                    pathname: '/user/[id]',
-                    params: { id: item.authorId },
-                  })
-                }
-              >
-                <Avatar user={item.author} />
-              </Pressable>
-              <View className="flex-1 gap-1">
-                <Text className="font-semibold text-slate-900">
-                  @{item.author.username}
-                </Text>
-                <Text className="leading-6 text-slate-700">{item.content}</Text>
-                <Text className="text-xs text-slate-500">
-                  {new Date(item.createdAt).toLocaleString('pt-BR')}
-                </Text>
-              </View>
-              {item.authorId === user?.id && (
+          renderItem={({ item, index }) => (
+            <ListItemEntrance index={index}>
+              <View className="flex-row gap-3 border-b border-line-soft px-4 py-4">
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="Excluir comentário"
-                  className="h-11 w-11 items-center justify-center"
-                  onPress={() => setSelected(item)}
+                  accessibilityLabel={t('common.viewProfileOf', {
+                    name: item.author.name,
+                  })}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/user/[id]',
+                      params: { id: item.authorId },
+                    })
+                  }
                 >
-                  <Trash2 size={18} color={colors.muted} />
+                  <Avatar user={item.author} />
                 </Pressable>
-              )}
-            </View>
+                <View className="flex-1 gap-1">
+                  <Text className="font-semibold text-fg">
+                    @{item.author.username}
+                  </Text>
+                  <Text className="leading-6 text-fg-soft">{item.content}</Text>
+                  <Text className="text-xs text-muted">
+                    {formatDate(item.createdAt, {
+                      dateStyle: 'short',
+                      timeStyle: 'short',
+                    })}
+                  </Text>
+                </View>
+                {item.authorId === user?.id && (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t('comments.delete')}
+                    className="h-11 w-11 items-center justify-center"
+                    onPress={() => setSelected(item)}
+                  >
+                    <Trash2 size={18} color={colors.muted} />
+                  </Pressable>
+                )}
+              </View>
+            </ListItemEntrance>
           )}
           ListEmptyComponent={
             list.loading ? (
               <Loading />
             ) : !list.error ? (
               <EmptyState
-                title="Seja o primeiro a comentar"
-                description="Converse sobre esta publicação."
+                title={t('comments.emptyTitle')}
+                description={t('comments.emptyDescription')}
               />
             ) : null
           }
@@ -125,7 +136,7 @@ export function Comments({ postId }: { postId: string }) {
             list.hasMore ? (
               <View className="p-4">
                 <Button
-                  title="Carregar mais comentários"
+                  title={t('comments.loadMore')}
                   secondary
                   loading={list.loadingMore}
                   onPress={() => void list.loadMore()}
@@ -135,7 +146,7 @@ export function Comments({ postId }: { postId: string }) {
           }
         />
         <MessageComposer
-          placeholder="Adicionar comentário..."
+          placeholder={t('comments.placeholder')}
           maxLength={255}
           onSend={async (text) => {
             await publishComment(postId, text);
@@ -145,9 +156,9 @@ export function Comments({ postId }: { postId: string }) {
       </View>
       <ConfirmDialog
         visible={!!selected}
-        title="Excluir comentário?"
-        description="Seu comentário será removido da publicação."
-        confirmLabel="Excluir"
+        title={t('comments.deleteTitle')}
+        description={t('comments.deleteDescription')}
+        confirmLabel={t('comments.deleteConfirm')}
         loading={deleting}
         onConfirm={() => void remove()}
         onCancel={() => setSelected(null)}
