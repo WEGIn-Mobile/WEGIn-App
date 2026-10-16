@@ -17,7 +17,6 @@ import Animated, {
   useSharedValue,
   withDelay,
   withSequence,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { deletePost, setPostLike } from '@/api/posts';
@@ -67,7 +66,7 @@ export function PostCard({
   function burst() {
     burstScale.value = 0.3;
     burstOpacity.value = 1;
-    burstScale.value = withSpring(1, { damping: 9, stiffness: 180 });
+    burstScale.value = withTiming(1, { duration: 180 });
     burstOpacity.value = withDelay(450, withTiming(0, { duration: 250 }));
   }
 
@@ -80,9 +79,10 @@ export function PostCard({
     setLikes((value) => Math.max(0, value + (next ? 1 : -1)));
     setError('');
     tapFeedback();
+    // Clique simples: aumenta e volta ao tamanho normal, sem oscilar.
     scale.value = withSequence(
-      withSpring(next ? 1.35 : 0.8, { damping: 6, stiffness: 300 }),
-      withSpring(1, { damping: 8, stiffness: 200 }),
+      withTiming(1.25, { duration: 110 }),
+      withTiming(1, { duration: 130 }),
     );
     try {
       await setPostLike(post.id, next);

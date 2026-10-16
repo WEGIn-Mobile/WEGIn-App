@@ -46,14 +46,14 @@ function Counter({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      className="items-center rounded-lg px-1 active:opacity-60"
+      className="items-center gap-0.5 rounded-lg px-1 active:opacity-60"
       onPress={onPress}
     >
       {/* A troca de chave anima o número quando ele muda (ex.: ao seguir). */}
       <Animated.View key={value} entering={FadeInUp.duration(220)}>
-        <Text className="text-lg font-bold text-fg">{value}</Text>
+        <Text className="text-2xl font-bold text-fg">{value}</Text>
       </Animated.View>
-      <Text className="text-xs text-muted">{label}</Text>
+      <Text className="text-sm text-muted">{label}</Text>
     </Pressable>
   );
 }
@@ -169,7 +169,7 @@ export function Profile({ userId }: { userId: string }) {
                   <View className="gap-5 px-5 py-6">
                     <View className="flex-row items-center justify-between">
                       <Avatar user={profile} large />
-                      <View className="flex-row gap-6">
+                      <View className="flex-1 flex-row justify-evenly">
                         <Counter
                           value={profile.followers}
                           label={t('profile.followers')}
