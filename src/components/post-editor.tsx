@@ -1,0 +1,316 @@
+import { useEffect, useRef, useState } from 'react';
+import { Keyboard, Text, View } from 'react-native';
+import { Image } from 'expo-image';
+import type { ImagePickerAsset } from 'expo-image-picker';
+import { router, useNavigation } from 'expo-router';
+import {
+  usePreventRemove,
+  usePreventRemoveContext,
+  useRoute,
+  type NavigationAction,
+} from '@react-navigation/native';
+import { ImagePlus } from 'lucide-react-native';
+import { getPost, editPost } from '@/api/posts';
+import { errorMessage } from '@/api/api-fetch';
+import { publishPost } from '@/services/PostService';
+import {
+  PhotoPermissionError,
+  pickPostPhoto,
+  requestPublicationPhotoPermissions,
+  type PhotoPermissionIssue,
+  type PostPhotoSource,
+} from '@/services/PostPhotoService';
+import { useSession } from '@/hooks/use-session';
+import type { Post } from '@/types/post';
+import { useTheme } from '@/hooks/use-theme';
+import { t as translate, useI18n } from '@/i18n';
+import { PostImage } from './post-image';
+import { PhotoPermissionNotice } from './photo-permission-notice';
+import { FormScrollView } from './form-scroll-view';
+import {
+  Button,
+  ConfirmDialog,
+  ErrorNotice,
+  Field,
+  Loading,
+  Screen,
+} from './common';
+
+export function PostEditor({ postId }: { postId?: string }) {
+  const { user } = useSession();
+  const { colors } = useTheme();
+  const { t } = useI18n();
+  const navigation = useNavigation();
+  const route = useRoute();
+  const { preventedRoutes } = usePreventRemoveContext();
+  const [post, setPost] = useState<Post | null>(null);
+  const [image, setImage] = useState<ImagePickerAsset | null>(null);
+  const [content, setContent] = useState('');
+  const [loading, setLoading] = useState(!!postId);
+  const [busy, setBusy] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const [checkingPermissions, setCheckingPermissions] = useState(!postId);
+  const [permissionIssues, setPermissionIssues] = useState<
+    PhotoPermissionIssue[]
+  >([]);
+  const permissionRequest = useRef<Promise<PhotoPermissionIssue[]> | null>(
+    null,
+  );
+  const pickerOpen = useRef(false);
+  const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
+  const [saved, setSaved] = useState(false);
+  const [pendingAction, setPendingAction] = useState<NavigationAction | null>(
+    null,
+  );
+  const [exitAction, setExitAction] = useState<NavigationAction | null>(null);
+  const submitting = useRef(false);
+  const leaving = useRef(false);
+  const dirty = content !== (post?.content ?? '') || !!image;
+  const exiting = saved || !!exitAction;
+  const nativeRemovalPrevented = !!preventedRoutes[route.key]?.preventRemove;
+
+  usePreventRemove(!!user && !exiting && (dirty || busy), ({ data }) => {
+    if (!busy) setPendingAction(data.action);
+  });
+
+  useEffect(() => {
+    if (!exiting || nativeRemovalPrevented) return;
+    // The native stack must commit the released guard before removing this screen.
+    const frame = requestAnimationFrame(() => {
+      if (leaving.current) return;
+      leaving.current = true;
+      Keyboard.dismiss();
+      if (exitAction) {
+        navigation.dispatch(exitAction);
+        return;
+      }
+      if (router.canGoBack()) router.back();
+      else router.replace('/feed');
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [exiting, nativeRemovalPrevented, exitAction, navigation]);
+
+  useEffect(() => {
+    if (postId) return;
+    let active = true;
+    // Reuse the request if Strict Mode re-runs this effect while a dialog is open.
+    permissionRequest.current ??= requestPublicationPhotoPermissions();
+    permissionRequest.current
+      .then((issues) => {
+        if (active) setPermissionIssues(issues);
+      })
+      .catch(() => {
+        if (active) {
+          setError(translate('editor.permissionsFailed'));
+        }
+      })
+      .finally(() => {
+        if (active) setCheckingPermissions(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [postId]);
+
+  useEffect(() => {
+    if (!postId) return;
+    let active = true;
+    setLoading(true);
+    setError('');
+    getPost(postId)
+      .then((result) => {
+        if (!active) return;
+        if (result.authorId !== user?.id) {
+          setError(translate('editor.onlyOwn'));
+          return;
+        }
+        setPost(result);
+        setContent(result.content);
+      })
+      .catch((cause) => {
+        if (active) setError(errorMessage(cause));
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [postId, user?.id, attempt]);
+
+  async function pickImage(source: PostPhotoSource = 'library') {
+    if (pickerOpen.current || checkingPermissions || busy || exiting) return;
+    pickerOpen.current = true;
+    setPicking(true);
+    setError('');
+    try {
+      const selected = await pickPostPhoto(source);
+      setPermissionIssues((issues) =>
+        issues.filter((issue) => issue.source !== source),
+      );
+      if (selected) setImage(selected);
+    } catch (cause) {
+      if (cause instanceof PhotoPermissionError) {
+        setPermissionIssues((issues) => [
+          ...issues.filter((issue) => issue.source !== source),
+          cause.issue,
+        ]);
+      } else {
+        setError(
+          cause instanceof Error ? cause.message : t('editor.photoFailed'),
+        );
+      }
+    } finally {
+      pickerOpen.current = false;
+      setPicking(false);
+    }
+  }
+
+  async function submit() {
+    if (submitting.current || exiting || (postId && !post)) return;
+    if (!postId && !image) {
+      setError(t('editor.photoRequired'));
+      return;
+    }
+    submitting.current = true;
+    Keyboard.dismiss();
+    setBusy(true);
+    setError('');
+    try {
+      if (postId) await editPost(postId, content.trim());
+      else if (image) await publishPost(image, content);
+      setPendingAction(null);
+      setSaved(true);
+    } catch (cause) {
+      submitting.current = false;
+      setError(errorMessage(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (loading)
+    return (
+      <Screen>
+        <Loading />
+      </Screen>
+    );
+  if (postId && !post)
+    return (
+      <Screen>
+        <ErrorNotice
+          message={error}
+          onRetry={() => setAttempt((value) => value + 1)}
+        />
+      </Screen>
+    );
+
+  return (
+    <Screen>
+      <FormScrollView
+        scrollToEndOnKeyboard
+        contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+      >
+        <View className="gap-5">
+          <Text className="text-base leading-6 text-muted">
+            {postId ? t('editor.editIntro') : t('editor.createIntro')}
+          </Text>
+          <View className="overflow-hidden rounded-2xl bg-surface">
+            {post ? (
+              <PostImage path={post.imageUrl} />
+            ) : image ? (
+              <Image
+                source={{ uri: image.uri }}
+                style={{ width: '100%', aspectRatio: 1 }}
+                contentFit="contain"
+                accessibilityLabel={t('editor.preview')}
+                transition={250}
+              />
+            ) : (
+              <View className="aspect-square items-center justify-center gap-4 border border-dashed border-line p-8">
+                <ImagePlus size={42} color={colors.accent} />
+                <Text className="text-lg font-semibold text-fg">
+                  {t('editor.emptyTitle')}
+                </Text>
+                <Text className="text-center text-muted">
+                  {t('editor.emptyDescription')}
+                </Text>
+                <Button
+                  title={t('editor.selectPhoto')}
+                  secondary
+                  loading={picking}
+                  disabled={checkingPermissions || exiting}
+                  onPress={() => void pickImage()}
+                />
+                <Button
+                  title={t('editor.takePhoto')}
+                  secondary
+                  disabled={checkingPermissions || picking || exiting}
+                  onPress={() => void pickImage('camera')}
+                />
+              </View>
+            )}
+          </View>
+          {!postId && image && (
+            <View className="gap-3">
+              <Button
+                title={t('editor.changePhoto')}
+                secondary
+                disabled={busy || checkingPermissions || exiting}
+                loading={picking}
+                onPress={() => void pickImage()}
+              />
+              <Button
+                title={t('editor.takePhoto')}
+                secondary
+                disabled={busy || checkingPermissions || picking || exiting}
+                onPress={() => void pickImage('camera')}
+              />
+            </View>
+          )}
+          {!postId && (
+            <PhotoPermissionNotice
+              issues={permissionIssues}
+              disabled={checkingPermissions || picking || busy || exiting}
+              onRetry={(source) => void pickImage(source)}
+              onError={setError}
+            />
+          )}
+          <Field
+            label={t('editor.caption')}
+            placeholder={t('editor.captionPlaceholder')}
+            defaultValue={post?.content ?? ''}
+            onChangeText={setContent}
+            multiline
+            maxLength={255}
+            editable={!busy && !exiting}
+            textAlignVertical="top"
+            style={{ minHeight: 110 }}
+          />
+          <Text className="text-right text-xs text-muted">
+            {content.length}/255
+          </Text>
+          <ErrorNotice message={error} />
+          <Button
+            title={postId ? t('editor.save') : t('editor.publish')}
+            loading={busy}
+            disabled={exiting || picking || (postId ? !dirty : !image)}
+            onPress={submit}
+          />
+        </View>
+      </FormScrollView>
+      <ConfirmDialog
+        visible={!!pendingAction}
+        title={t('common.discardTitle')}
+        description={t('editor.discardDescription')}
+        confirmLabel={t('common.discard')}
+        onCancel={() => setPendingAction(null)}
+        onConfirm={() => {
+          setExitAction(pendingAction);
+          setPendingAction(null);
+        }}
+      />
+    </Screen>
+  );
+}

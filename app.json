@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "WEGIn",
+    "slug": "wegin",
+    "version": "1.1.0",
+    "icon": "./assets/logos/wegin_logo_app.png",
+    "orientation": "portrait",
+    "scheme": "wegin",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": { "supportsTablet": true },
+    "android": {
+      "package": "com.wegin.app",
+      "versionCode": 10,
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "web": { "bundler": "metro", "output": "static" },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/images/splash.png",
+          "imageWidth": 1,
+          "dark": {
+            "backgroundColor": "#0B1120",
+            "image": "./assets/images/splash.png"
+          }
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permita que o WEGIn acesse suas fotos para publicações e foto de perfil.",
+          "cameraPermission": "Permita que o WEGIn acesse sua câmera para publicações e foto de perfil.",
+          "microphonePermission": false
+        }
+      ],
+      "./scripts/with-camera-permission",
+      "expo-localization"
+    ],
+    "experiments": { "typedRoutes": true, "reactCompiler": true }
+  }
+}
