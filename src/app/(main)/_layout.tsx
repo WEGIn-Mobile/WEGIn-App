@@ -119,9 +119,11 @@ export default function MainLayout() {
             fontSize: 11,
             fontWeight: '700',
           },
+          // Sempre um texto: passar `undefined` mantinha o rótulo anterior
+          // depois que a última conversa era lida.
           tabBarAccessibilityLabel: badge
-            ? `${t('tabs.messages')}, ${t('messages.unread', { count: unread.conversations })}`
-            : undefined,
+            ? `${t('tabs.messages')}, ${t('messages.unreadConversations', { count: unread.conversations })}`
+            : t('tabs.messages'),
           tabBarIcon: (props) => <TabIcon icon={MessageCircle} {...props} />,
         }}
       />

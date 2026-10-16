@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
+import { useScrollToTop } from '@react-navigation/native';
 import { Search, X } from 'lucide-react-native';
 import { searchUsers } from '@/api/users';
 import { errorMessage } from '@/api/api-fetch';
@@ -23,6 +24,8 @@ export default function SearchScreen() {
   const [focused, setFocused] = useState(false);
   const [query, setQuery] = useState('');
   const input = useRef<TextInput>(null);
+  const listRef = useRef<FlatList<UserSummary>>(null);
+  useScrollToTop(listRef);
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -120,6 +123,7 @@ export default function SearchScreen() {
         </View>
       </View>
       <FlatList
+        ref={listRef}
         data={users}
         keyExtractor={(user) => user.id}
         keyboardShouldPersistTaps="handled"

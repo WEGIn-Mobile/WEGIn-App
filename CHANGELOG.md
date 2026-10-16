@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.1.1 (Android versionCode 11)
+
+Correções encontradas no plano de testes do app (`../Testes-Mobile/`).
+
+### Correções
+
+- Acessibilidade: o leitor de tela deixa de anunciar "1 mensagem não lida" na aba Mensagens depois que a última conversa é lida.
+- O rótulo da aba Mensagens descreve o número de conversas não lidas, que é o que o badge conta.
+- Tocar de novo na aba ativa (Início, Pesquisar, Mensagens ou Meu perfil) volta a lista ao topo.
+
+### Requisitos
+
+Os mesmos da versão 1.1.0: nenhuma mudança na API nem em módulos nativos.
+
 ## 1.1.0 (Android versionCode 10)
 
 ### Novidades

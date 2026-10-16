@@ -107,6 +107,8 @@ export const en: Dictionary = {
     chatWith: 'Chat with {{name}}',
     unread_one: '{{count}} unread message',
     unread_other: '{{count}} unread messages',
+    unreadConversations_one: '{{count}} unread conversation',
+    unreadConversations_other: '{{count}} unread conversations',
     deleted: 'Message deleted by the user',
     you: 'You: ',
     typeMore: 'Type at least 2 characters',
