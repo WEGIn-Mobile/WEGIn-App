@@ -1,6 +1,11 @@
 import { apiFetch } from './api-fetch';
 import type { Page } from '@/types/api';
-import type { Conversation, Message, MessagePage } from '@/types/message';
+import type {
+  Conversation,
+  Message,
+  MessagePage,
+  UnreadCount,
+} from '@/types/message';
 
 export const getConversations = (skip = 0, signal?: AbortSignal) =>
   apiFetch<Page<Conversation>>(`/messages?take=20&skip=${skip}`, { signal });
@@ -28,3 +33,5 @@ export const deleteMessage = (id: string) =>
   apiFetch<Message>(`/messages/${encodeURIComponent(id)}`, {
     method: 'DELETE',
   });
+export const getUnreadCount = (signal?: AbortSignal) =>
+  apiFetch<UnreadCount>('/messages/unread-count', { signal });

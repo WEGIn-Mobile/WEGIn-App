@@ -19,7 +19,35 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        brand: { 50: '#EAF3FC', 500: '#005CA9' },
+        // Tokens do WEGIn: valores em src/styles/theme.ts (claro e escuro).
+        brand: {
+          50: 'rgb(var(--wg-brand-soft)/<alpha-value>)',
+          500: 'rgb(var(--wg-brand)/<alpha-value>)',
+        },
+        canvas: 'rgb(var(--wg-canvas)/<alpha-value>)',
+        surface: {
+          DEFAULT: 'rgb(var(--wg-surface)/<alpha-value>)',
+          strong: 'rgb(var(--wg-surface-strong)/<alpha-value>)',
+        },
+        line: {
+          DEFAULT: 'rgb(var(--wg-line)/<alpha-value>)',
+          soft: 'rgb(var(--wg-line-soft)/<alpha-value>)',
+        },
+        fg: {
+          DEFAULT: 'rgb(var(--wg-fg)/<alpha-value>)',
+          soft: 'rgb(var(--wg-fg-soft)/<alpha-value>)',
+        },
+        muted: 'rgb(var(--wg-muted)/<alpha-value>)',
+        accent: 'rgb(var(--wg-accent)/<alpha-value>)',
+        'on-brand': 'rgb(var(--wg-on-brand)/<alpha-value>)',
+        danger: {
+          DEFAULT: 'rgb(var(--wg-danger)/<alpha-value>)',
+          soft: 'rgb(var(--wg-danger-soft)/<alpha-value>)',
+          fg: 'rgb(var(--wg-danger-fg)/<alpha-value>)',
+        },
+        unread: 'rgb(var(--wg-unread)/<alpha-value>)',
+        'on-unread': 'rgb(var(--wg-on-unread)/<alpha-value>)',
+        overlay: 'rgb(var(--wg-overlay)/<alpha-value>)',
         primary: {
           0: 'rgb(var(--color-primary-0)/<alpha-value>)',
           50: 'rgb(var(--color-primary-50)/<alpha-value>)',

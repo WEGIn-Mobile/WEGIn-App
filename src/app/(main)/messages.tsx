@@ -1,63 +1,120 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
+import { Ban, MessageCircle, Search } from 'lucide-react-native';
 import { getConversations } from '@/api/messages';
 import { usePagedList } from '@/hooks/use-paged-list';
 import { useSession } from '@/hooks/use-session';
+import { useTheme } from '@/hooks/use-theme';
+import { useUnread } from '@/hooks/use-unread';
 import { useUserSearch } from '@/hooks/use-user-search';
+import { useI18n } from '@/i18n';
 import type { Conversation } from '@/types/message';
 import type { UserSummary } from '@/types/user';
 import { Avatar } from '@/components/avatar';
+import { ReadReceipt, UnreadBadge } from '@/components/unread-badge';
 import {
   Button,
   EmptyState,
   ErrorNotice,
+  ListItemEntrance,
   Loading,
   Screen,
 } from '@/components/common';
-import { colors } from '@/styles/theme';
+
+type Row = {
+  user: UserSummary;
+  lastMessage: Conversation['lastMessage'] | null;
+  unreadCount: number;
+};
 
 const key = (item: Conversation) => item.user.id;
 export default function MessagesScreen() {
   const { user } = useSession();
+  const { colors } = useTheme();
+  const { t, formatConversationTime } = useI18n();
+  const unread = useUnread();
   const fetchPage = useCallback(
     (skip: number, signal: AbortSignal) => getConversations(skip, signal),
     [],
   );
   const list = usePagedList(fetchPage, key, { pollMs: 15000 });
   const [query, setQuery] = useState('');
+  const [focused, setFocused] = useState(false);
   const term = query.trim();
   const search = useUserSearch(term, user?.id);
   const searchingUsers = !!term;
-  const rows: {
-    user: UserSummary;
-    lastMessage: Conversation['lastMessage'] | null;
-    unreadCount: number;
-  }[] = searchingUsers
+  const rows: Row[] = searchingUsers
     ? search.users.map((person) => ({
         user: person,
         lastMessage: null,
         unreadCount: 0,
       }))
     : list.items;
+
+  // Mantém o badge da aba em sincronia quando a lista revela novas mensagens.
+  const totalUnread = list.items.reduce(
+    (total, item) => total + (item.unreadCount ?? 0),
+    0,
+  );
+  const previousUnread = useRef(totalUnread);
+  const { refresh: refreshUnread } = unread;
+  useEffect(() => {
+    if (previousUnread.current !== totalUnread) refreshUnread();
+    previousUnread.current = totalUnread;
+  }, [totalUnread, refreshUnread]);
+
+  function preview(item: Row) {
+    const last = item.lastMessage;
+    if (!last)
+      return <Text className="text-sm text-muted">@{item.user.username}</Text>;
+    const own = last.senderId === user?.id;
+    const hasUnread = item.unreadCount > 0;
+    return (
+      <View className="flex-row items-center gap-1">
+        {own && !last.deletedAt && <ReadReceipt read={!!last.readAt} />}
+        {last.deletedAt && <Ban size={14} color={colors.muted} />}
+        <Text
+          numberOfLines={1}
+          className={`flex-1 text-sm ${last.deletedAt ? 'italic text-muted' : hasUnread ? 'font-semibold text-fg' : 'text-muted'}`}
+        >
+          {last.deletedAt
+            ? t('messages.deleted')
+            : `${own ? t('messages.you') : ''}${last.content}`}
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <Screen>
       <View className="px-4 py-3">
-        <TextInput
-          accessibilityLabel="Procurar usuário para conversar"
-          placeholder="Procurar usuário"
-          placeholderTextColor={colors.muted}
-          onChangeText={setQuery}
-          maxLength={60}
-          autoCapitalize="none"
-          className="min-h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 text-base text-slate-900"
-        />
+        <View
+          className={`min-h-12 flex-row items-center gap-3 rounded-xl border bg-surface px-3 ${focused ? 'border-accent' : 'border-line'}`}
+        >
+          <Search size={20} color={colors.muted} />
+          <TextInput
+            accessibilityLabel={t('messages.searchLabel')}
+            placeholder={t('messages.searchPlaceholder')}
+            placeholderTextColor={colors.muted}
+            selectionColor={colors.accent}
+            onChangeText={setQuery}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            maxLength={60}
+            autoCapitalize="none"
+            className="min-h-12 flex-1 text-base text-fg"
+          />
+        </View>
       </View>
       <FlatList
         data={rows}
         keyExtractor={(item) => item.user.id}
         refreshing={!searchingUsers && list.loading}
-        onRefresh={() => void list.refresh()}
+        onRefresh={() => {
+          void list.refresh();
+          unread.refresh();
+        }}
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
           <ErrorNotice
@@ -67,69 +124,61 @@ export default function MessagesScreen() {
             }
           />
         }
-        renderItem={({ item }) => (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Conversar com ${item.user.name}${item.unreadCount > 0 ? `, ${item.unreadCount} mensagens não lidas` : ''}`}
-            onPress={() =>
-              router.push({
-                pathname: '/chat/[id]',
-                params: { id: item.user.id },
-              })
-            }
-            className="flex-row items-center gap-3 border-b border-slate-100 px-5 py-4"
-          >
-            <Avatar user={item.user} />
-            <View className="flex-1 gap-1">
-              <Text
-                className={`text-slate-900 ${item.unreadCount > 0 ? 'font-bold' : 'font-semibold'}`}
+        renderItem={({ item, index }) => {
+          const hasUnread = item.unreadCount > 0;
+          return (
+            <ListItemEntrance index={index}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`${t('messages.chatWith', { name: item.user.name })}${hasUnread ? `, ${t('messages.unread', { count: item.unreadCount })}` : ''}`}
+                onPress={() =>
+                  router.push({
+                    pathname: '/chat/[id]',
+                    params: { id: item.user.id },
+                  })
+                }
+                className="flex-row items-center gap-3 border-b border-line-soft px-5 py-4 active:bg-surface"
               >
-                {item.user.name}
-              </Text>
-              <Text numberOfLines={1} className="text-sm text-slate-500">
-                {item.lastMessage?.deletedAt
-                  ? 'Mensagem excluída pelo usuário'
-                  : item.lastMessage
-                    ? `${item.lastMessage.senderId === user?.id ? 'Você: ' : ''}${item.lastMessage.content}`
-                    : `@${item.user.username}`}
-              </Text>
-            </View>
-            {item.lastMessage && (
-              <View className="items-end gap-2">
-                <Text className="text-xs text-slate-400">
-                  {new Date(item.lastMessage.createdAt).toLocaleDateString(
-                    'pt-BR',
-                    { day: '2-digit', month: '2-digit' },
-                  )}
-                </Text>
-                {item.unreadCount > 0 && (
-                  <View
-                    accessibilityLabel="Mensagens não lidas"
-                    style={{
-                      width: 10,
-                      height: 10,
-                      borderRadius: 5,
-                      backgroundColor: colors.unread,
-                    }}
-                  />
-                )}
-              </View>
-            )}
-          </Pressable>
-        )}
+                <Avatar user={item.user} />
+                <View className="flex-1 gap-1">
+                  <View className="flex-row items-center gap-2">
+                    <Text
+                      numberOfLines={1}
+                      className={`flex-1 text-fg ${hasUnread ? 'font-bold' : 'font-semibold'}`}
+                    >
+                      {item.user.name}
+                    </Text>
+                    {item.lastMessage && (
+                      <Text
+                        className={`text-xs ${hasUnread ? 'font-semibold text-unread' : 'text-muted'}`}
+                      >
+                        {formatConversationTime(item.lastMessage.createdAt)}
+                      </Text>
+                    )}
+                  </View>
+                  <View className="flex-row items-center gap-3">
+                    <View className="flex-1">{preview(item)}</View>
+                    <UnreadBadge count={item.unreadCount} />
+                  </View>
+                </View>
+              </Pressable>
+            </ListItemEntrance>
+          );
+        }}
         ListEmptyComponent={
           (searchingUsers ? search.loading : list.loading) ? (
             <Loading />
           ) : !(searchingUsers ? search.error : list.error) ? (
             <EmptyState
+              icon={<MessageCircle size={28} color={colors.accent} />}
               title={
                 searchingUsers
                   ? term.length < 2
-                    ? 'Digite pelo menos 2 caracteres'
-                    : 'Nenhum perfil encontrado'
-                  : 'Suas conversas começam aqui'
+                    ? t('messages.typeMore')
+                    : t('messages.noProfiles')
+                  : t('messages.emptyTitle')
               }
-              description="Procure alguém para enviar uma mensagem."
+              description={t('messages.emptyDescription')}
             />
           ) : null
         }
@@ -137,7 +186,7 @@ export default function MessagesScreen() {
           (searchingUsers ? search.hasMore : list.hasMore) ? (
             <View className="p-4">
               <Button
-                title="Carregar mais"
+                title={t('common.loadMore')}
                 secondary
                 loading={searchingUsers ? search.loading : list.loadingMore}
                 onPress={() =>

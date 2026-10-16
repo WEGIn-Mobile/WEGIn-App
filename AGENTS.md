@@ -20,6 +20,7 @@ O aplicativo usa Expo Router e organiza o código em `src/`. Coloque cada arquiv
 │   ├── components/        # Componentes visuais reutilizáveis
 │   ├── database/          # Persistência local, quando necessária
 │   ├── hooks/             # Hooks React reutilizáveis
+│   ├── i18n/              # Idiomas (pt, en, es), tradução e formatação de datas
 │   ├── lib/               # Utilitários e configurações compartilhadas
 │   ├── services/          # Operações e regras da aplicação
 │   ├── styles/            # Tema, tokens e estilos compartilhados
@@ -44,6 +45,8 @@ Antes de adicionar uma dependência ou criar um componente, verifique o que já 
 | Gluestack UI v3     | Componentes de interface                |
 | Lucide React Native | Ícones de uso geral                     |
 | Expo Secure Store   | Armazenamento seguro do token de acesso |
+| Expo Localization   | Idioma e região do dispositivo          |
+| Reanimated          | Animações de interface                  |
 
 Consulte `package.json` para confirmar as versões instaladas. Não presuma que uma versão citada em documentação antiga corresponde à versão usada pelo projeto.
 
@@ -57,6 +60,30 @@ Consulte `package.json` para confirmar as versões instaladas. Não presuma que 
 ## Estilização
 
 Use NativeWind como padrão de estilização. Mantenha cores, espaçamentos e outros valores compartilhados consistentes com o tema do projeto.
+
+### Tema claro e escuro
+
+O app segue o tema do dispositivo por padrão (`userInterfaceStyle: automatic`) e permite escolher Claro, Escuro ou Padrão do dispositivo em Preferências. As cores ficam em `src/styles/theme.ts` (`palettes.light` e `palettes.dark`) e são aplicadas como variáveis CSS na raiz por `ThemeProvider` (`src/hooks/use-theme.tsx`).
+
+- Nas classes, use somente os tokens semânticos: `bg-canvas`, `bg-surface`, `bg-surface-strong`, `border-line`, `border-line-soft`, `text-fg`, `text-fg-soft`, `text-muted`, `text-accent`, `bg-brand-500`, `bg-brand-50`, `text-on-brand`, `bg-danger`, `bg-danger-soft`, `text-danger-fg`, `bg-unread`, `text-on-unread`. Não use `slate-*`, `white` ou cores fixas, pois elas não mudam no tema escuro.
+- Para ícones, `placeholderTextColor`, navegação e outras props que recebem cor, use `useTheme().colors`.
+- `text-accent` é a cor da marca para textos e ícones sobre o fundo; `bg-brand-500` é o preenchimento de botões e balões (com `text-on-brand`).
+
+### Animações
+
+Use Reanimated para animações curtas (até ~300 ms) e com mola nas interações. Reutilize `PressableScale` (toque com leve redução), `ListItemEntrance` (entrada dos itens de lista) e as animações de `ConfirmDialog`, `ErrorNotice` e `EmptyState` em `src/components/common.tsx`. Não use `className` diretamente em `Animated.View`: anime um contêiner com `style` e estilize a `View` interna. Curtir e seguir atualizam a interface na hora e desfazem a mudança se a API falhar. Use `src/lib/haptics.ts` para o feedback tátil.
+
+### Idiomas
+
+O app suporta português, inglês e espanhol. Por padrão, usa o primeiro idioma suportado da lista do dispositivo e, se nenhum for suportado, inglês; o usuário pode trocar em Preferências. Nunca escreva textos de interface direto nos componentes:
+
+- Adicione cada texto em `src/i18n/locales/pt.ts` (referência) e nas mesmas chaves em `en.ts` e `es.ts`; o TypeScript acusa chaves faltando.
+- Em componentes, use `const { t } = useI18n()`. Fora deles (serviços, `apiFetch`) ou dentro de efeitos que não devem reexecutar ao trocar o idioma, use `t` importado de `@/i18n`.
+- Plurais usam `_one`/`_other` e `t('post.likes', { count })`; interpolação usa `{{nome}}`.
+- Formate datas com `formatDate` e `formatConversationTime` de `useI18n()`, nunca com um locale fixo.
+- A API responde em português: em pt, `apiFetch` mostra a mensagem do backend; nos outros idiomas, mostra uma mensagem traduzida pelo status HTTP.
+
+As preferências de tema e idioma ficam em `src/hooks/use-preferences.tsx` e são salvas com `src/lib/preferences-storage.ts`.
 
 Quando uma necessidade não for atendida adequadamente pelo NativeWind, use a API de estilos apropriada do React Native e organize os valores reutilizáveis em `src/styles/`. Evite espalhar estilos repetidos pelas telas.
 
@@ -74,15 +101,15 @@ Centralize a configuração HTTP e o tratamento comum de erros em `src/api/`. Ar
 - Nos campos de texto, use `defaultValue` para o valor inicial e `onChangeText` para atualizar os dados do formulário; preserve a composição do teclado para acentos. Para limpar a pesquisa, use a referência do campo e `clear()`.
 - Use `FormScrollView` nos formulários. `useKeyboardInset` mede o contêiner na janela e reserva somente a área sobreposta pelo teclado; não some offsets de cabeçalho ou a altura inteira do teclado, pois isso pode duplicar o espaço já reservado pelo Android. No editor, `scrollToEndOnKeyboard` mantém a legenda e os controles finais visíveis após o redimensionamento. Mantenha NativeWind 4.2+ para compatibilidade das referências e estilos com React Native 0.81/Reanimated 4.
 - Antes de sair do editor após salvar ou descartar, aguarde a liberação da proteção em `usePreventRemoveContext` e navegue no próximo frame. Bloqueie envios duplicados durante a solicitação e a saída da tela.
-- Reutilize os componentes de `src/components/` e os valores de `src/styles/theme.ts`. As cores de marca para NativeWind estão em `tailwind.config.js`.
+- Reutilize os componentes de `src/components/` e os tokens de `src/styles/theme.ts`, mapeados para classes em `tailwind.config.js`.
 - As listas de posts são atualizadas ao receber foco e usam paginação explícita. Não adicione bibliotecas de estado ou cache para os fluxos simples do MVP.
-- Comentários usam os contratos de posts com `parentId`. Mensagens têm datas JSON em string; a API devolve cada página em ordem cronológica e o chat usa uma lista invertida. `usePagedList` centraliza paginação, cancelamento e atualização ao receber foco. Chat e conversas consultam a API periodicamente somente com a tela em foco e o app ativo; não anuncie presença, leitura ou WebSocket sem suporte do backend.
-- Renderize os estados de carregamento e conversa vazia fora da lista invertida do chat. `Conversation.unreadCount` alimenta o indicador verde na lista de conversas; a leitura usa `PATCH /messages/:userId/read` com `throughId`, limitado às mensagens recebidas até esse marcador. A exclusão usa `DELETE /messages/:id`, somente para o remetente, e preserva a mensagem como aviso para os dois perfis. A primeira página inclui `deletedMessages` para reconciliar também as mensagens antigas já carregadas, sem baixar novamente todo o histórico.
+- Comentários usam os contratos de posts com `parentId`. Mensagens têm datas JSON em string; a API devolve cada página em ordem cronológica e o chat usa uma lista invertida. `usePagedList` centraliza paginação, cancelamento e atualização ao receber foco. Chat e conversas consultam a API periodicamente somente com a tela em foco e o app ativo; não anuncie presença ou WebSocket sem suporte do backend.
+- Renderize os estados de carregamento e conversa vazia fora da lista invertida do chat. `Conversation.unreadCount` alimenta o contador verde (estilo WhatsApp) na lista de conversas, e `GET /messages/unread-count` alimenta o badge verde da aba Mensagens por meio de `UnreadProvider` (`src/hooks/use-unread.tsx`), consultado a cada 20 s com o app ativo e atualizado ao ler uma conversa. Mensagens próprias mostram ✓ (enviada) ou ✓✓ (lida, por `readAt`); a leitura usa `PATCH /messages/:userId/read` com `throughId`, limitado às mensagens recebidas até esse marcador. A exclusão usa `DELETE /messages/:id`, somente para o remetente, e preserva a mensagem como aviso para os dois perfis. A primeira página inclui `deletedMessages` para reconciliar também as mensagens antigas já carregadas, sem baixar novamente todo o histórico.
 - A opção de excluir uma mensagem própria aparece ao segurá-la, com confirmação antes da solicitação; não exiba um botão de três pontos em cada mensagem. Disponibilize a mesma ação para leitores de tela. Mensagens recebidas ou já excluídas não oferecem essa ação.
-- `UserService.getProfile` calcula os contadores pelas listas completas de `/followers/:id` e `/following/:id`, pois a API publicada tem relações de contagem invertidas. Não troque os rótulos nem inverta cegamente os campos: as listas têm a direção correta em ambas as versões da API. Se esses endpoints passarem a ter paginação, use os totais retornados pelo backend.
+- `UserService.getProfile` calcula os contadores pelas listas completas de `/followers/:id` e `/following/:id`, pois versões antigas da API publicada tinham relações de contagem invertidas (corrigidas na branch `feat/social-mvp-backend`). Não troque os rótulos nem inverta cegamente os campos: as listas têm a direção correta em ambas as versões da API. Se esses endpoints passarem a ter paginação, use os totais retornados pelo backend.
 - A edição do perfil salva nome, usuário e bio (até 160 caracteres), e faz upload do avatar em `/users/me/avatar`. `PhotoUploadService` prepara multipart para posts e avatares, enquanto `PostPhotoService` continua responsável por câmera, galeria e permissões. Avatares em `/api/users/` usam o token; não envie credenciais a URLs externas de avatar.
 - `GestureHandlerRootView` envolve a raiz. Reanimated e o plugin de Worklets configurado no Babel animam as interações; o duplo toque na foto usa Gesture Handler para curtir. Preserve as versões compatíveis com o Expo SDK instalado.
-- Notificações foram retiradas do app por falta de suporte no backend publicado. Não inclua telas, contadores, registro de dispositivos push, permissões ou chamadas automáticas para esse recurso. Preserve a proteção no Git para eventuais arquivos privados de `.push/` e Firebase.
+- Notificações push foram retiradas do app por falta de suporte no backend publicado. Não inclua telas, registro de dispositivos push, permissões ou chamadas automáticas para esse recurso. O badge de mensagens não lidas da aba Mensagens não é uma notificação push. Preserve a proteção no Git para eventuais arquivos privados de `.push/` e Firebase.
 - Erros técnicos como `Cannot GET/POST/PATCH/DELETE` são normalizados em `apiFetch`; uma rota ausente continua sendo erro, nunca uma lista vazia ou um upload bem-sucedido. Atualize a API publicada antes de distribuir funções que dependam de novos endpoints.
 
 ## Antes de concluir uma alteração

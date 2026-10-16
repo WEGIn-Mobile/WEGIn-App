@@ -5,12 +5,20 @@ import { getFollowers, getFollowing } from '@/api/follows';
 import { usePagedList } from '@/hooks/use-paged-list';
 import type { UserSummary } from '@/types/user';
 import { Avatar } from '@/components/avatar';
-import { EmptyState, ErrorNotice, Loading, Screen } from '@/components/common';
+import { useI18n } from '@/i18n';
+import {
+  EmptyState,
+  ErrorNotice,
+  ListItemEntrance,
+  Loading,
+  Screen,
+} from '@/components/common';
 
 const key = (user: UserSummary) => user.id;
 export default function ConnectionsScreen() {
   const { id, kind } = useLocalSearchParams<{ id: string; kind: string }>();
   const followers = kind !== 'following';
+  const { t } = useI18n();
   const fetchPage = useCallback(
     async (_skip: number, signal: AbortSignal) => {
       const items = await (followers
@@ -25,7 +33,9 @@ export default function ConnectionsScreen() {
   return (
     <Screen>
       <Stack.Screen
-        options={{ title: followers ? 'Seguidores' : 'Seguindo' }}
+        options={{
+          title: followers ? t('profile.followers') : t('profile.following'),
+        }}
       />
       <FlatList
         data={list.items}
@@ -38,21 +48,25 @@ export default function ConnectionsScreen() {
             onRetry={() => void list.refresh()}
           />
         }
-        renderItem={({ item }) => (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Ver perfil de ${item.name}`}
-            onPress={() =>
-              router.push({ pathname: '/user/[id]', params: { id: item.id } })
-            }
-            className="flex-row items-center gap-3 border-b border-slate-100 px-5 py-4"
-          >
-            <Avatar user={item} />
-            <View>
-              <Text className="font-semibold text-slate-900">{item.name}</Text>
-              <Text className="text-slate-500">@{item.username}</Text>
-            </View>
-          </Pressable>
+        renderItem={({ item, index }) => (
+          <ListItemEntrance index={index}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('common.viewProfileOf', {
+                name: item.name,
+              })}
+              onPress={() =>
+                router.push({ pathname: '/user/[id]', params: { id: item.id } })
+              }
+              className="flex-row items-center gap-3 border-b border-line-soft px-5 py-4 active:bg-surface"
+            >
+              <Avatar user={item} />
+              <View>
+                <Text className="font-semibold text-fg">{item.name}</Text>
+                <Text className="text-muted">@{item.username}</Text>
+              </View>
+            </Pressable>
+          </ListItemEntrance>
         )}
         ListEmptyComponent={
           list.loading ? (
@@ -60,9 +74,7 @@ export default function ConnectionsScreen() {
           ) : !list.error ? (
             <EmptyState
               title={
-                followers
-                  ? 'Nenhum seguidor ainda'
-                  : 'Nenhum perfil seguido ainda'
+                followers ? t('profile.noFollowers') : t('profile.noFollowing')
               }
             />
           ) : null
