@@ -110,6 +110,8 @@ export const pt = {
     chatWith: 'Conversar com {{name}}',
     unread_one: '{{count}} mensagem não lida',
     unread_other: '{{count}} mensagens não lidas',
+    unreadConversations_one: '{{count}} conversa não lida',
+    unreadConversations_other: '{{count}} conversas não lidas',
     deleted: 'Mensagem excluída pelo usuário',
     you: 'Você: ',
     typeMore: 'Digite pelo menos 2 caracteres',

@@ -110,6 +110,8 @@ export const es: Dictionary = {
     chatWith: 'Conversar con {{name}}',
     unread_one: '{{count}} mensaje no leído',
     unread_other: '{{count}} mensajes no leídos',
+    unreadConversations_one: '{{count}} conversación no leída',
+    unreadConversations_other: '{{count}} conversaciones no leídas',
     deleted: 'Mensaje eliminado por el usuario',
     you: 'Tú: ',
     typeMore: 'Escribe al menos 2 caracteres',

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
+import { useScrollToTop } from '@react-navigation/native';
 import { Ban, MessageCircle, Search } from 'lucide-react-native';
 import { getConversations } from '@/api/messages';
 import { usePagedList } from '@/hooks/use-paged-list';
@@ -58,6 +59,8 @@ export default function MessagesScreen() {
     0,
   );
   const previousUnread = useRef(totalUnread);
+  const listRef = useRef<FlatList<Row>>(null);
+  useScrollToTop(listRef);
   const { refresh: refreshUnread } = unread;
   useEffect(() => {
     if (previousUnread.current !== totalUnread) refreshUnread();
@@ -108,6 +111,7 @@ export default function MessagesScreen() {
         </View>
       </View>
       <FlatList
+        ref={listRef}
         data={rows}
         keyExtractor={(item) => item.user.id}
         refreshing={!searchingUsers && list.loading}

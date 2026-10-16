@@ -1,6 +1,8 @@
 import { useCallback, useRef, useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
+import { useScrollToTop } from '@react-navigation/native';
+import type { Post } from '@/types/post';
 import {
   ImagePlus,
   LogOut,
@@ -70,6 +72,8 @@ export function Profile({ userId }: { userId: string }) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [following, setFollowingState] = useState(false);
   const followingRequest = useRef(false);
+  const listRef = useRef<FlatList<Post>>(null);
+  useScrollToTop(listRef);
   const list = usePosts(userId);
 
   const loadProfile = useCallback(
@@ -151,6 +155,7 @@ export function Profile({ userId }: { userId: string }) {
   return (
     <Screen>
       <FlatList
+        ref={listRef}
         data={profile ? list.posts : []}
         keyExtractor={(post) => post.id}
         numColumns={3}

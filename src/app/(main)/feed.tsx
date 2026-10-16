@@ -1,10 +1,13 @@
+import { useRef } from 'react';
 import { FlatList, View } from 'react-native';
+import { useScrollToTop } from '@react-navigation/native';
 import { router } from 'expo-router';
 import { Camera } from 'lucide-react-native';
 import { useTheme } from '@/hooks/use-theme';
 import { useI18n } from '@/i18n';
 import { usePosts } from '@/hooks/use-posts';
 import { PostCard } from '@/components/post-card';
+import type { Post } from '@/types/post';
 import {
   Button,
   EmptyState,
@@ -15,12 +18,15 @@ import {
 } from '@/components/common';
 
 export default function FeedScreen() {
+  const listRef = useRef<FlatList<Post>>(null);
+  useScrollToTop(listRef);
   const list = usePosts();
   const { colors } = useTheme();
   const { t } = useI18n();
   return (
     <Screen>
       <FlatList
+        ref={listRef}
         data={list.posts}
         keyExtractor={(post) => post.id}
         refreshing={list.loading}
