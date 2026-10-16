@@ -2,7 +2,7 @@
   "expo": {
     "name": "WEGIn",
     "slug": "wegin",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "icon": "./assets/logos/wegin_logo_app.png",
     "orientation": "portrait",
     "scheme": "wegin",
@@ -11,7 +11,7 @@
     "ios": { "supportsTablet": true },
     "android": {
       "package": "com.wegin.app",
-      "versionCode": 9,
+      "versionCode": 10,
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },

@@ -15,8 +15,13 @@ Aplicativo mobile de uma rede social interna da WEG, construído com Expo Router
 - Seguir/deixar de seguir e consultar seguidores e perfis seguidos.
 - Editar nome, nome de usuário, bio e foto de perfil com câmera ou galeria.
 - Aba de mensagens com pesquisa, conversas entre dois perfis e histórico paginado.
-- Indicador verde de mensagens recebidas ainda não lidas e exclusão das próprias mensagens com aviso para os dois perfis.
-- Gestos com React Native Gesture Handler e animações com Reanimated, incluindo duplo toque para curtir.
+- Contador verde de mensagens não lidas por conversa e badge na aba Mensagens (estilo WhatsApp), confirmação de leitura (✓/✓✓) e exclusão das próprias mensagens com aviso para os dois perfis.
+- Gestos com React Native Gesture Handler e animações com Reanimated, incluindo duplo toque para curtir, curtir/seguir com resposta imediata e feedback tátil.
+- Tema claro e escuro conforme o dispositivo.
+- Português, inglês e espanhol conforme o idioma do dispositivo (inglês quando não suportado).
+- Tela de Preferências para fixar o tema e o idioma.
+
+O histórico de versões está em [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Executar
 
